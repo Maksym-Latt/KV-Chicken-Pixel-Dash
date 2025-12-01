@@ -25,11 +25,12 @@ import kotlinx.coroutines.launch
 const val PLAYER_WIDTH = 70f
 const val PLAYER_HEIGHT = 80f
 const val PLAYER_X = 52f
-private const val GRAVITY = 1350f
+private const val GRAVITY = -1350f
 private const val JUMP_FORCE = 870f
 private const val HIGH_JUMP_FORCE = 1120f
 private const val BASE_SPEED = 260f
 private const val SPEED_GROWTH = 8f
+private const val MAX_SPEED = 520f
 private const val TIME_SCORE_RATE = 12f
 private const val EGG_SCORE_VALUE = 10
 const val ROCK_WIDTH = 64f
@@ -38,6 +39,9 @@ const val BOX_WIDTH = 78f
 const val BOX_HEIGHT = 120f
 const val EGG_WIDTH = 40f
 const val EGG_HEIGHT = 48f
+const val MIN_GROUND_HEIGHT = 64f
+const val MAX_GROUND_HEIGHT = 140f
+private const val DEFAULT_GROUND_HEIGHT = 88f
 
 enum class GameStatus { Ready, Running, Paused, Over }
 
@@ -61,6 +65,7 @@ data class GameUiState(
     val playerY: Float = 0f,
     val playerFrame: Int = 0,
     val speed: Float = BASE_SPEED,
+    val groundHeight: Float = DEFAULT_GROUND_HEIGHT,
     val obstacles: List<Entity> = emptyList(),
     val eggs: List<Entity> = emptyList(),
 )
@@ -112,7 +117,7 @@ class GameViewModel @Inject constructor(
         val onGround = state.playerY <= 0f
         if (!onGround) return
 
-        velocityY = if (high) -HIGH_JUMP_FORCE else -JUMP_FORCE
+        velocityY = if (high) HIGH_JUMP_FORCE else JUMP_FORCE
         audioController.playChickenJump()
     }
 
@@ -146,7 +151,10 @@ class GameViewModel @Inject constructor(
         animationTimer = 0f
         spawnTimer = 0.2f
         eggSpawnTimer = 0.6f
-        _uiState.value = GameUiState(status = GameStatus.Running)
+        _uiState.value = GameUiState(
+            status = GameStatus.Running,
+            groundHeight = _uiState.value.groundHeight
+        )
         gameJob = viewModelScope.launch { gameLoop() }
     }
 
@@ -171,7 +179,7 @@ class GameViewModel @Inject constructor(
         eggSpawnTimer -= dt
 
         var state = _uiState.value
-        val speed = BASE_SPEED + elapsedTime * SPEED_GROWTH
+        val speed = (BASE_SPEED + elapsedTime * SPEED_GROWTH).coerceAtMost(MAX_SPEED)
 
         val newFrame = ((animationTimer * 10).toInt() % 4)
         var newY = state.playerY + velocityY * dt
@@ -292,6 +300,11 @@ class GameViewModel @Inject constructor(
             _uiState.value = state.copy(status = GameStatus.Paused)
             audioController.pauseMusic()
         }
+    }
+
+    fun setGroundHeight(height: Float) {
+        val clamped = height.coerceIn(MIN_GROUND_HEIGHT, MAX_GROUND_HEIGHT)
+        _uiState.value = _uiState.value.copy(groundHeight = clamped)
     }
 
     private suspend fun applyAudioVolumes() {

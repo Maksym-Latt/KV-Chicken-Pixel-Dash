@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -81,7 +82,7 @@ fun GameScreen(
                     )
                 }
         ) {
-            val groundHeight = 88.dp
+            val groundHeight = state.groundHeight.dp
             val groundTop = maxHeight - groundHeight
 
             LaunchedEffect(maxWidth, maxHeight) {
@@ -96,17 +97,64 @@ fun GameScreen(
                 alpha = 0.7f
             )
 
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .align(Alignment.TopCenter),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ScorePill(label = "Score", value = state.score)
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ScorePill(label = "Best", value = state.bestScore)
-                    EggCounter(value = state.eggsCollected)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ScorePill(label = "Score", value = state.score)
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ScorePill(label = "Best", value = state.bestScore)
+                        EggCounter(value = state.eggsCollected)
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    PixelButton(
+                        text = if (state.status == GameStatus.Paused) "Resume" else "Pause",
+                        onClick = viewModel::togglePause,
+                        modifier = Modifier.weight(1f)
+                    )
+                    PixelButton(
+                        text = "Menu",
+                        onClick = {
+                            viewModel.onExit()
+                            onExit()
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Surface(color = Color(0xAAFFFFFF)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text(
+                            text = "Horizon height: ${state.groundHeight.toInt()}dp",
+                            fontFamily = retroFont,
+                            fontSize = 11.sp,
+                            color = Color(0xFF1D1100)
+                        )
+                        Slider(
+                            value = state.groundHeight,
+                            onValueChange = viewModel::setGroundHeight,
+                            valueRange = MIN_GROUND_HEIGHT..MAX_GROUND_HEIGHT
+                        )
+                    }
                 }
             }
 
@@ -153,19 +201,6 @@ fun GameScreen(
                     spriteY = state.playerY.dp,
                     bouncing = state.status == GameStatus.Running
                 )
-
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    PixelButton(text = if (state.status == GameStatus.Paused) "Resume" else "Pause", onClick = viewModel::togglePause)
-                    PixelButton(text = "Menu", onClick = {
-                        viewModel.onExit()
-                        onExit()
-                    })
-                }
 
                 if (state.status == GameStatus.Paused) {
                     OverlayCard(title = "Paused", subtitle = "Tap resume to keep running") {
