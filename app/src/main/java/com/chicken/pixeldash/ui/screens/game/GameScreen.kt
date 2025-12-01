@@ -2,6 +2,7 @@ package com.chicken.pixeldash.ui.screens.game
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,11 +26,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
@@ -53,6 +59,7 @@ fun GameScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    var showHitboxes by rememberSaveable { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -83,9 +90,30 @@ fun GameScreen(
         ) {
             val groundHeight = state.groundHeight.dp
             val groundTop = maxHeight - groundHeight
+            val density = LocalDensity.current
 
             LaunchedEffect(maxWidth, maxHeight) {
                 viewModel.onViewportChanged(maxWidth.value, maxHeight.value)
+            }
+
+            val rockPainter = painterResource(id = R.drawable.item_rock)
+            val boxPainter = painterResource(id = R.drawable.item_box)
+            val eggPainter = painterResource(id = R.drawable.item_egg)
+            val chickenPainter = painterResource(id = state.skin.drawable)
+
+            LaunchedEffect(rockPainter, boxPainter, eggPainter, chickenPainter, density) {
+                fun register(type: EntityType, painter: androidx.compose.ui.graphics.painter.Painter) {
+                    val intrinsic = painter.intrinsicSize
+                    if (intrinsic == Size.Unspecified) return
+                    val widthDp = with(density) { intrinsic.width.toDp().value }
+                    val heightDp = with(density) { intrinsic.height.toDp().value }
+                    viewModel.setSpriteDimensions(type, widthDp, heightDp)
+                }
+
+                register(EntityType.Rock, rockPainter)
+                register(EntityType.Box, boxPainter)
+                register(EntityType.Egg, eggPainter)
+                register(EntityType.Player, chickenPainter)
             }
 
             Image(
@@ -133,6 +161,11 @@ fun GameScreen(
                         },
                         modifier = Modifier.weight(1f)
                     )
+                    PixelButton(
+                        text = if (showHitboxes) "Hide Hitboxes" else "Show Hitboxes",
+                        onClick = { showHitboxes = !showHitboxes },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
 
             }
@@ -151,33 +184,34 @@ fun GameScreen(
                     }
                     Sprite(
                         painter = painter,
-                        width = (obstacle.width * obstacle.sizeScale).dp,
-                        height = (obstacle.height * obstacle.sizeScale).dp,
                         x = obstacle.x.dp,
                         groundTop = groundTop,
-                        spriteY = obstacle.y.dp
+                        spriteY = obstacle.y.dp,
+                        sizeScale = obstacle.sizeScale,
+                        colliderScale = obstacle.colliderScale,
+                        showHitbox = showHitboxes
                     )
                 }
 
                 state.eggs.forEach { egg ->
                     Sprite(
                         painter = painterResource(id = R.drawable.item_egg),
-                        width = (egg.width * egg.sizeScale).dp,
-                        height = (egg.height * egg.sizeScale).dp,
                         x = egg.x.dp,
                         groundTop = groundTop,
-                        spriteY = egg.y.dp
+                        spriteY = egg.y.dp,
+                        sizeScale = egg.sizeScale,
+                        colliderScale = egg.colliderScale,
+                        showHitbox = showHitboxes
                     )
                 }
-
-                val chickenPainter = painterResource(id = state.skin.drawable)
                 Sprite(
                     painter = chickenPainter,
-                    width = PLAYER_WIDTH.dp,
-                    height = PLAYER_HEIGHT.dp,
                     x = PLAYER_X.dp,
                     groundTop = groundTop,
                     spriteY = state.playerY.dp,
+                    sizeScale = PLAYER_SIZE_SCALE,
+                    colliderScale = PLAYER_COLLIDER_SCALE,
+                    showHitbox = showHitboxes,
                     bouncing = state.status == GameStatus.Running
                 )
 
@@ -215,27 +249,55 @@ fun GameScreen(
 @Composable
 private fun BoxScope.Sprite(
     painter: androidx.compose.ui.graphics.painter.Painter,
-    width: Dp,
-    height: Dp,
     x: Dp,
     groundTop: Dp,
     spriteY: Dp,
+    sizeScale: Float = 1f,
+    colliderScale: Float = 1f,
+    showHitbox: Boolean = false,
     bouncing: Boolean = false
 ) {
-    val yOffset = groundTop - height - spriteY
-    Image(
-        painter = painter,
-        contentDescription = null,
+    val intrinsicSize = painter.intrinsicSize
+    if (intrinsicSize == Size.Unspecified) return
+
+    val baseWidth = with(LocalDensity.current) { intrinsicSize.width.toDp() }
+    val baseHeight = with(LocalDensity.current) { intrinsicSize.height.toDp() }
+    val scaledWidth = baseWidth * sizeScale
+    val scaledHeight = baseHeight * sizeScale
+    val yOffset = groundTop - scaledHeight - spriteY
+    val colliderWidth = scaledWidth * colliderScale
+    val colliderHeight = scaledHeight * colliderScale
+    val colliderOffsetX = (scaledWidth - colliderWidth) / 2f
+    val colliderOffsetY = (scaledHeight - colliderHeight) / 2f
+
+    Box(
         modifier = Modifier
-            .size(width = width, height = height)
             .offset(x = x, y = yOffset)
-            .graphicsLayer {
-                if (bouncing) {
-                    translationY = (-spriteY.value * 0.04f)
-                }
-            },
-        contentScale = ContentScale.Fit
-    )
+            .size(width = scaledWidth, height = scaledHeight)
+    ) {
+        Image(
+            painter = painter,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    if (bouncing) {
+                        translationY = (-spriteY.value * 0.04f)
+                    }
+                },
+            contentScale = ContentScale.Fit
+        )
+
+        if (showHitbox) {
+            Box(
+                modifier = Modifier
+                    .offset(x = colliderOffsetX, y = colliderOffsetY)
+                    .size(width = colliderWidth, height = colliderHeight)
+                    .border(width = 1.dp, color = Color.Red)
+                    .background(Color.Red.copy(alpha = 0.25f))
+            )
+        }
+    }
 }
 
 @Composable

@@ -25,13 +25,9 @@ import kotlinx.coroutines.launch
 private const val DEFAULT_SIZE_SCALE = 1f
 private const val DEFAULT_COLLIDER_SCALE = 0.8f
 
-private const val PLAYER_BASE_WIDTH = 70f
-private const val PLAYER_BASE_HEIGHT = 80f
-private const val PLAYER_SIZE_SCALE = DEFAULT_SIZE_SCALE
-const val PLAYER_WIDTH = PLAYER_BASE_WIDTH * PLAYER_SIZE_SCALE
-const val PLAYER_HEIGHT = PLAYER_BASE_HEIGHT * PLAYER_SIZE_SCALE
+const val PLAYER_SIZE_SCALE = DEFAULT_SIZE_SCALE
 const val PLAYER_X = 52f
-private const val PLAYER_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
+const val PLAYER_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
 
 private const val GRAVITY = -1350f
 private const val JUMP_FORCE = 870f
@@ -42,34 +38,22 @@ private const val MAX_SPEED = 520f
 private const val TIME_SCORE_RATE = 12f
 private const val EGG_SCORE_VALUE = 10
 
-private const val ROCK_BASE_WIDTH = 64f
-private const val ROCK_BASE_HEIGHT = 44f
 private const val ROCK_SIZE_SCALE = DEFAULT_SIZE_SCALE
 private const val ROCK_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
-const val ROCK_WIDTH = ROCK_BASE_WIDTH * ROCK_SIZE_SCALE
-const val ROCK_HEIGHT = ROCK_BASE_HEIGHT * ROCK_SIZE_SCALE
 
-private const val BOX_BASE_WIDTH = 78f
-private const val BOX_BASE_HEIGHT = 120f
 private const val BOX_SIZE_SCALE = DEFAULT_SIZE_SCALE
 private const val BOX_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
-const val BOX_WIDTH = BOX_BASE_WIDTH * BOX_SIZE_SCALE
-const val BOX_HEIGHT = BOX_BASE_HEIGHT * BOX_SIZE_SCALE
 
 private const val EGG_SIZE_SCALE = DEFAULT_SIZE_SCALE
 private const val EGG_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
-const val EGG_WIDTH = 40f
-const val EGG_HEIGHT = 48f
 
 private const val DEFAULT_GROUND_HEIGHT = 140f
 
 enum class GameStatus { Ready, Running, Paused, Over }
 
-enum class EntityType { Rock, Box, Egg }
+enum class EntityType { Rock, Box, Egg, Player }
 
 private data class EntityTemplate(
-    val width: Float,
-    val height: Float,
     val sizeScale: Float,
     val colliderScale: Float
 )
@@ -79,8 +63,6 @@ data class Entity(
     val type: EntityType,
     val x: Float,
     val y: Float,
-    val width: Float,
-    val height: Float,
     val sizeScale: Float = DEFAULT_SIZE_SCALE,
     val colliderScale: Float = DEFAULT_COLLIDER_SCALE
 )
@@ -126,6 +108,12 @@ class GameViewModel @Inject constructor(
     private var animationTimer = 0f
     private var spawnTimer = 0f
     private var eggSpawnTimer = 0.7f
+    private val spriteDimensions = mutableMapOf(
+        EntityType.Player to SpriteDimensions(1f, 1f),
+        EntityType.Rock to SpriteDimensions(1f, 1f),
+        EntityType.Box to SpriteDimensions(1f, 1f),
+        EntityType.Egg to SpriteDimensions(1f, 1f)
+    )
 
     init {
         viewModelScope.launch {
@@ -138,6 +126,11 @@ class GameViewModel @Inject constructor(
     fun onViewportChanged(width: Float, height: Float) {
         viewportWidth = width
         viewportHeight = height
+    }
+
+    fun setSpriteDimensions(type: EntityType, width: Float, height: Float) {
+        if (width == 0f || height == 0f) return
+        spriteDimensions[type] = SpriteDimensions(width, height)
     }
 
     fun jump(high: Boolean) {
@@ -220,26 +213,26 @@ class GameViewModel @Inject constructor(
 
         val movedObstacles = state.obstacles.mapNotNull { entity ->
             val nextX = entity.x - speed * dt
-            val widthWithScale = entity.width * entity.sizeScale
+            val widthWithScale = entity.scaledDimensions(spriteDimensionsFor(entity.type)).width
             if (nextX + widthWithScale < 0f) null else entity.copy(x = nextX)
         }
         val movedEggs = state.eggs.mapNotNull { entity ->
             val nextX = entity.x - speed * dt
-            val widthWithScale = entity.width * entity.sizeScale
+            val widthWithScale = entity.scaledDimensions(spriteDimensionsFor(entity.type)).width
             if (nextX + widthWithScale < 0f) null else entity.copy(x = nextX)
         }
 
         val playerRect = scaledRect(
             x = PLAYER_X,
             y = newY,
-            width = PLAYER_WIDTH,
-            height = PLAYER_HEIGHT,
+            width = spriteDimensionsFor(EntityType.Player).width * PLAYER_SIZE_SCALE,
+            height = spriteDimensionsFor(EntityType.Player).height * PLAYER_SIZE_SCALE,
             colliderScale = PLAYER_COLLIDER_SCALE
         )
 
-        val (survivingEggs, collectedEggs) = movedEggs.partition { !intersects(playerRect, it.toRect()) }
+        val (survivingEggs, collectedEggs) = movedEggs.partition { !intersects(playerRect, it.toRect(spriteDimensionsFor(it.type))) }
 
-        val collision = movedObstacles.any { intersects(playerRect, it.toRect()) }
+        val collision = movedObstacles.any { intersects(playerRect, it.toRect(spriteDimensionsFor(it.type))) }
 
         val newScore = (elapsedTime * TIME_SCORE_RATE).toInt() + (state.eggsCollected + collectedEggs.size) * EGG_SCORE_VALUE
 
@@ -275,18 +268,16 @@ class GameViewModel @Inject constructor(
     private fun spawnObstacle() {
         val type = if (Random.nextFloat() > 0.45f) EntityType.Rock else EntityType.Box
         val template = when (type) {
-            EntityType.Rock -> EntityTemplate(ROCK_BASE_WIDTH, ROCK_BASE_HEIGHT, ROCK_SIZE_SCALE, ROCK_COLLIDER_SCALE)
-            EntityType.Box -> EntityTemplate(BOX_BASE_WIDTH, BOX_BASE_HEIGHT, BOX_SIZE_SCALE, BOX_COLLIDER_SCALE)
-            else -> EntityTemplate(ROCK_BASE_WIDTH, ROCK_BASE_HEIGHT, ROCK_SIZE_SCALE, ROCK_COLLIDER_SCALE)
+            EntityType.Rock -> EntityTemplate(ROCK_SIZE_SCALE, ROCK_COLLIDER_SCALE)
+            EntityType.Box -> EntityTemplate(BOX_SIZE_SCALE, BOX_COLLIDER_SCALE)
+            else -> EntityTemplate(ROCK_SIZE_SCALE, ROCK_COLLIDER_SCALE)
         }
-        val spawnX = viewportWidth + (template.width * template.sizeScale) + 12f
+        val spawnX = viewportWidth + (spriteDimensionsFor(type).width * template.sizeScale) + 12f
         val newObstacle = Entity(
             id = Random.nextInt(),
             type = type,
             x = spawnX,
             y = 0f,
-            width = template.width,
-            height = template.height,
             sizeScale = template.sizeScale,
             colliderScale = template.colliderScale
         )
@@ -294,16 +285,15 @@ class GameViewModel @Inject constructor(
     }
 
     private fun spawnEgg(speed: Float) {
-        val maxAirRoom = (viewportHeight / 3f).coerceAtLeast(EGG_HEIGHT * EGG_SIZE_SCALE)
+        val eggDimensions = spriteDimensionsFor(EntityType.Egg)
+        val maxAirRoom = (viewportHeight / 3f).coerceAtLeast(eggDimensions.height * EGG_SIZE_SCALE)
         val offsetY = if (speed > 520f) maxAirRoom else maxAirRoom / 2f
-        val scaledEggWidth = EGG_WIDTH * EGG_SIZE_SCALE
+        val scaledEggWidth = eggDimensions.width * EGG_SIZE_SCALE
         val newEgg = Entity(
             id = Random.nextInt(),
             type = EntityType.Egg,
             x = viewportWidth + scaledEggWidth + 24f,
             y = offsetY,
-            width = EGG_WIDTH,
-            height = EGG_HEIGHT,
             sizeScale = EGG_SIZE_SCALE,
             colliderScale = EGG_COLLIDER_SCALE
         )
@@ -347,7 +337,23 @@ class GameViewModel @Inject constructor(
 
 private data class Rect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
-private fun Entity.toRect(): Rect = scaledRect(x, y, width * sizeScale, height * sizeScale, colliderScale)
+private data class SpriteDimensions(val width: Float = 0f, val height: Float = 0f)
+
+private fun Entity.toRect(dimensions: SpriteDimensions): Rect = scaledRect(
+    x = x,
+    y = y,
+    width = dimensions.width * sizeScale,
+    height = dimensions.height * sizeScale,
+    colliderScale = colliderScale
+)
+
+private fun Entity.scaledDimensions(dimensions: SpriteDimensions): SpriteDimensions = SpriteDimensions(
+    width = dimensions.width * sizeScale,
+    height = dimensions.height * sizeScale
+)
+
+private fun GameViewModel.spriteDimensionsFor(type: EntityType): SpriteDimensions =
+    spriteDimensions[type] ?: SpriteDimensions()
 
 private fun scaledRect(
     x: Float,
