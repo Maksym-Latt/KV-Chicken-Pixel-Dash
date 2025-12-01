@@ -22,8 +22,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-const val PLAYER_WIDTH = 70f
-const val PLAYER_HEIGHT = 80f
+const val PLAYER_BASE_WIDTH = 70f
+const val PLAYER_BASE_HEIGHT = 80f
 const val PLAYER_X = 52f
 private const val GRAVITY = -1350f
 private const val JUMP_FORCE = 520f
@@ -33,12 +33,12 @@ private const val SPEED_GROWTH = 8f
 private const val MAX_SPEED = 520f
 private const val TIME_SCORE_RATE = 12f
 private const val EGG_SCORE_VALUE = 10
-const val ROCK_WIDTH = 64f
-const val ROCK_HEIGHT = 44f
-const val BOX_WIDTH = 78f
-const val BOX_HEIGHT = 120f
-const val EGG_WIDTH = 40f
-const val EGG_HEIGHT = 48f
+const val ROCK_BASE_WIDTH = 64f
+const val ROCK_BASE_HEIGHT = 44f
+const val BOX_BASE_WIDTH = 78f
+const val BOX_BASE_HEIGHT = 120f
+const val EGG_BASE_WIDTH = 40f
+const val EGG_BASE_HEIGHT = 48f
 private const val DEFAULT_GROUND_HEIGHT = 140f
 
 enum class GameStatus { Ready, Running, Paused, Over }
@@ -50,8 +50,8 @@ data class Entity(
     val type: EntityType,
     val x: Float,
     val y: Float,
-    val width: Float,
-    val height: Float
+    val sizeScale: Float = 1f,
+    val hitboxScale: Float = 1f
 )
 
 data class GameUiState(
@@ -64,6 +64,8 @@ data class GameUiState(
     val playerFrame: Int = 0,
     val speed: Float = BASE_SPEED,
     val groundHeight: Float = DEFAULT_GROUND_HEIGHT,
+    val playerSizeScale: Float = 1f,
+    val playerHitboxScale: Float = 1f,
     val obstacles: List<Entity> = emptyList(),
     val eggs: List<Entity> = emptyList(),
 )
@@ -189,23 +191,18 @@ class GameViewModel @Inject constructor(
 
         val movedObstacles = state.obstacles.mapNotNull { entity ->
             val nextX = entity.x - speed * dt
-            if (nextX + entity.width < 0f) null else entity.copy(x = nextX)
+            if (nextX + entity.spriteWidth() < 0f) null else entity.copy(x = nextX)
         }
         val movedEggs = state.eggs.mapNotNull { entity ->
             val nextX = entity.x - speed * dt
-            if (nextX + entity.width < 0f) null else entity.copy(x = nextX)
+            if (nextX + entity.spriteWidth() < 0f) null else entity.copy(x = nextX)
         }
 
-        val playerRect = Rect(
-            left = PLAYER_X,
-            top = newY,
-            right = PLAYER_X + PLAYER_WIDTH,
-            bottom = newY + PLAYER_HEIGHT
-        )
+        val playerRect = playerHitboxRect(newY, state.playerSizeScale, state.playerHitboxScale)
 
-        val (survivingEggs, collectedEggs) = movedEggs.partition { !intersects(playerRect, it.toRect()) }
+        val (survivingEggs, collectedEggs) = movedEggs.partition { !intersects(playerRect, it.hitboxRect()) }
 
-        val collision = movedObstacles.any { intersects(playerRect, it.toRect()) }
+        val collision = movedObstacles.any { intersects(playerRect, it.hitboxRect()) }
 
         val newScore = (elapsedTime * TIME_SCORE_RATE).toInt() + (state.eggsCollected + collectedEggs.size) * EGG_SCORE_VALUE
 
@@ -240,33 +237,34 @@ class GameViewModel @Inject constructor(
 
     private fun spawnObstacle() {
         val type = if (Random.nextFloat() > 0.45f) EntityType.Rock else EntityType.Box
-        val (width, height) = when (type) {
-            EntityType.Rock -> ROCK_WIDTH to ROCK_HEIGHT
-            EntityType.Box -> BOX_WIDTH to BOX_HEIGHT
-            else -> ROCK_WIDTH to ROCK_HEIGHT
-        }
+        val sizeScale = 1f
+        val hitboxScale = 1f
+        val (width, _) = obstacleSpriteSize(type, sizeScale)
         val spawnX = viewportWidth + width + 12f
         val newObstacle = Entity(
             id = Random.nextInt(),
             type = type,
             x = spawnX,
             y = 0f,
-            width = width,
-            height = height
+            sizeScale = sizeScale,
+            hitboxScale = hitboxScale
         )
         _uiState.value = _uiState.value.copy(obstacles = _uiState.value.obstacles + newObstacle)
     }
 
     private fun spawnEgg(speed: Float) {
-        val maxAirRoom = (viewportHeight / 3f).coerceAtLeast(EGG_HEIGHT.toFloat())
+        val maxAirRoom = (viewportHeight / 3f).coerceAtLeast(EGG_BASE_HEIGHT.toFloat())
         val offsetY = if (speed > 520f) maxAirRoom else maxAirRoom / 2f
+        val sizeScale = 1f
+        val hitboxScale = 1f
+        val (width, _) = eggSpriteSize(sizeScale)
         val newEgg = Entity(
             id = Random.nextInt(),
             type = EntityType.Egg,
-            x = viewportWidth + EGG_WIDTH + 24f,
+            x = viewportWidth + width + 24f,
             y = offsetY,
-            width = EGG_WIDTH,
-            height = EGG_HEIGHT
+            sizeScale = sizeScale,
+            hitboxScale = hitboxScale
         )
         _uiState.value = _uiState.value.copy(eggs = _uiState.value.eggs + newEgg)
     }
@@ -306,9 +304,48 @@ class GameViewModel @Inject constructor(
     }
 }
 
-private data class Rect(val left: Float, val top: Float, val right: Float, val bottom: Float)
+data class Rect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
-private fun Entity.toRect(): Rect = Rect(x, y, x + width, y + height)
+internal fun Entity.spriteWidth(): Float = spriteSize().first
+
+internal fun Entity.spriteHeight(): Float = spriteSize().second
+
+internal fun Entity.spriteSize(): Pair<Float, Float> = when (type) {
+    EntityType.Rock -> obstacleSpriteSize(EntityType.Rock, sizeScale)
+    EntityType.Box -> obstacleSpriteSize(EntityType.Box, sizeScale)
+    EntityType.Egg -> eggSpriteSize(sizeScale)
+}
+
+internal fun Entity.hitboxRect(): Rect {
+    val (spriteWidth, spriteHeight) = spriteSize()
+    val hitboxWidth = spriteWidth * hitboxScale
+    val hitboxHeight = spriteHeight * hitboxScale
+    val left = x + (spriteWidth - hitboxWidth) / 2f
+    val top = y + (spriteHeight - hitboxHeight) / 2f
+    return Rect(left = left, top = top, right = left + hitboxWidth, bottom = top + hitboxHeight)
+}
+
+internal fun playerSpriteSize(sizeScale: Float): Pair<Float, Float> =
+    PLAYER_BASE_WIDTH * sizeScale to PLAYER_BASE_HEIGHT * sizeScale
+
+internal fun playerHitboxRect(y: Float, sizeScale: Float, hitboxScale: Float): Rect {
+    val (spriteWidth, spriteHeight) = playerSpriteSize(sizeScale)
+    val hitboxWidth = spriteWidth * hitboxScale
+    val hitboxHeight = spriteHeight * hitboxScale
+    val left = PLAYER_X + (spriteWidth - hitboxWidth) / 2f
+    val top = y + (spriteHeight - hitboxHeight) / 2f
+    return Rect(left = left, top = top, right = left + hitboxWidth, bottom = top + hitboxHeight)
+}
+
+private fun obstacleSpriteSize(type: EntityType, sizeScale: Float): Pair<Float, Float> =
+    when (type) {
+        EntityType.Rock -> ROCK_BASE_WIDTH * sizeScale to ROCK_BASE_HEIGHT * sizeScale
+        EntityType.Box -> BOX_BASE_WIDTH * sizeScale to BOX_BASE_HEIGHT * sizeScale
+        else -> ROCK_BASE_WIDTH * sizeScale to ROCK_BASE_HEIGHT * sizeScale
+    }
+
+private fun eggSpriteSize(sizeScale: Float): Pair<Float, Float> =
+    EGG_BASE_WIDTH * sizeScale to EGG_BASE_HEIGHT * sizeScale
 
 private fun intersects(a: Rect, b: Rect): Boolean {
     val horizontal = a.left < b.right && a.right > b.left

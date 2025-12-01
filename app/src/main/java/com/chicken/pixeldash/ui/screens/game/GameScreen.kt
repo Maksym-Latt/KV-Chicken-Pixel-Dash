@@ -2,6 +2,7 @@ package com.chicken.pixeldash.ui.screens.game
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -26,6 +27,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -54,6 +57,7 @@ fun GameScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    var showHitboxes by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -134,6 +138,11 @@ fun GameScreen(
                         },
                         modifier = Modifier.weight(1f)
                     )
+                    PixelButton(
+                        text = if (showHitboxes) "Hitbox: On" else "Hitbox: Off",
+                        onClick = { showHitboxes = !showHitboxes },
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
 
@@ -147,36 +156,42 @@ fun GameScreen(
                         EntityType.Box -> painterResource(id = R.drawable.item_box)
                         else -> painterResource(id = R.drawable.item_rock)
                     }
+                    val spriteSize = obstacle.spriteSize()
                     Sprite(
                         painter = painter,
-                        width = obstacle.width.dp,
-                        height = obstacle.height.dp,
-                        x = obstacle.x.dp,
+                        spriteSize = spriteSize,
+                        x = obstacle.x,
                         groundTop = groundTop,
-                        spriteY = obstacle.y.dp
+                        spriteY = obstacle.y,
+                        showHitbox = showHitboxes,
+                        hitbox = obstacle.hitboxRect()
                     )
                 }
 
                 state.eggs.forEach { egg ->
+                    val spriteSize = egg.spriteSize()
                     Sprite(
                         painter = painterResource(id = R.drawable.item_egg),
-                        width = egg.width.dp,
-                        height = egg.height.dp,
-                        x = egg.x.dp,
+                        spriteSize = spriteSize,
+                        x = egg.x,
                         groundTop = groundTop,
-                        spriteY = egg.y.dp
+                        spriteY = egg.y,
+                        showHitbox = showHitboxes,
+                        hitbox = egg.hitboxRect()
                     )
                 }
 
                 val chickenPainter = painterResource(id = state.skin.drawable)
+                val chickenSpriteSize = playerSpriteSize(state.playerSizeScale)
                 Sprite(
                     painter = chickenPainter,
-                    width = PLAYER_WIDTH.dp,
-                    height = PLAYER_HEIGHT.dp,
-                    x = PLAYER_X.dp,
+                    spriteSize = chickenSpriteSize,
+                    x = PLAYER_X,
                     groundTop = groundTop,
-                    spriteY = state.playerY.dp,
-                    bouncing = state.status == GameStatus.Running
+                    spriteY = state.playerY,
+                    bouncing = state.status == GameStatus.Running,
+                    showHitbox = showHitboxes,
+                    hitbox = playerHitboxRect(state.playerY, state.playerSizeScale, state.playerHitboxScale)
                 )
 
                 if (state.status == GameStatus.Paused) {
@@ -213,27 +228,42 @@ fun GameScreen(
 @Composable
 private fun BoxScope.Sprite(
     painter: androidx.compose.ui.graphics.painter.Painter,
-    width: Dp,
-    height: Dp,
-    x: Dp,
+    spriteSize: Pair<Float, Float>,
+    x: Float,
     groundTop: Dp,
-    spriteY: Dp,
-    bouncing: Boolean = false
+    spriteY: Float,
+    bouncing: Boolean = false,
+    showHitbox: Boolean = false,
+    hitbox: Rect? = null
 ) {
-    val yOffset = groundTop - height - spriteY
+    val width = spriteSize.first.dp
+    val height = spriteSize.second.dp
+    val yOffset = groundTop - height - spriteY.dp
     Image(
         painter = painter,
         contentDescription = null,
         modifier = Modifier
             .size(width = width, height = height)
-            .offset(x = x, y = yOffset)
+            .offset(x = x.dp, y = yOffset)
             .graphicsLayer {
                 if (bouncing) {
-                    translationY = (-spriteY.value * 0.04f)
+                    translationY = (-spriteY * 0.04f)
                 }
             },
         contentScale = ContentScale.Crop
     )
+
+    if (showHitbox && hitbox != null) {
+        val hitboxWidth = (hitbox.right - hitbox.left).dp
+        val hitboxHeight = (hitbox.bottom - hitbox.top).dp
+        val hitboxYOffset = groundTop - hitboxHeight - hitbox.top.dp
+        Box(
+            modifier = Modifier
+                .offset(x = hitbox.left.dp, y = hitboxYOffset)
+                .size(hitboxWidth, hitboxHeight)
+                .border(1.dp, Color.Red, RoundedCornerShape(2.dp))
+        )
+    }
 }
 
 @Composable
