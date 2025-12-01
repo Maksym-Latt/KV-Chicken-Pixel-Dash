@@ -6,8 +6,8 @@ interface SettingsRepository {
     val musicEnabled: Flow<Boolean>
     val soundEnabled: Flow<Boolean>
 
-    fun getMusicVolume(): Int
-    fun getSoundVolume(): Int
+    val musicVolumeFlow: Flow<Int>
+    val soundVolumeFlow: Flow<Int>
 
     suspend fun setMusicEnabled(enabled: Boolean)
     suspend fun setSoundEnabled(enabled: Boolean)

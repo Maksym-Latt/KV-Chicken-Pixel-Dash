@@ -34,15 +34,13 @@ class DataStoreSettingsRepository @Inject constructor(
         prefs[soundKey] ?: true
     }
 
-    override fun getMusicVolume(): Int = runCatching {
-        context.settingsDataStore.data.map { prefs -> prefs[musicVolumeKey] ?: DEFAULT_VOLUME }
-            .first()
-    }.getOrDefault(DEFAULT_VOLUME)
+    override val musicVolumeFlow: Flow<Int> =
+        context.settingsDataStore.data
+            .map { it[musicVolumeKey] ?: DEFAULT_VOLUME }
 
-    override fun getSoundVolume(): Int = runCatching {
-        context.settingsDataStore.data.map { prefs -> prefs[soundVolumeKey] ?: DEFAULT_VOLUME }
-            .first()
-    }.getOrDefault(DEFAULT_VOLUME)
+    override val soundVolumeFlow: Flow<Int> =
+        context.settingsDataStore.data
+            .map { it[soundVolumeKey] ?: DEFAULT_VOLUME }
 
     override suspend fun setMusicEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { prefs ->

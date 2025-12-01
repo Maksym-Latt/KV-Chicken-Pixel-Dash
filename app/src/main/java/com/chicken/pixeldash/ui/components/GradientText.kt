@@ -64,7 +64,9 @@ fun GradientText(
     Box(modifier = modifier) {
 
         val gradientText = buildAnnotatedString {
-            withStyle(SpanStyle(brush = brush)) { AnnotatedString.Builder.append(text) }
+            withStyle(style = SpanStyle(brush = brush)) {
+                append(text)
+            }
         }
 
         Text(

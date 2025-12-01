@@ -4,10 +4,13 @@ import android.content.Context
 import android.media.MediaPlayer
 import androidx.annotation.RawRes
 import com.chicken.pixeldash.R
-import javax.inject.Inject
-import javax.inject.Singleton
 import com.chicken.pixeldash.data.settings.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+import javax.inject.Singleton
 
 @Singleton
 class DefaultAudioController @Inject constructor(
@@ -15,8 +18,32 @@ class DefaultAudioController @Inject constructor(
     settingsRepository: SettingsRepository
 ) : AudioController {
 
-    private var musicVolume: Float = settingsRepository.getMusicVolume().toVolume()
-    private var soundVolume: Float = settingsRepository.getSoundVolume().toVolume()
+    private var musicVolume: Float = 100.toVolume()
+    private var soundVolume: Float = 100.toVolume()
+
+    init {
+        CoroutineScope(Dispatchers.Main.immediate).launch {
+            settingsRepository.musicVolumeFlow.collect { value ->
+                musicVolume = value.toVolume()
+                updateMusicVolume()
+            }
+        }
+
+        CoroutineScope(Dispatchers.Main.immediate).launch {
+            settingsRepository.soundVolumeFlow.collect { value ->
+                soundVolume = value.toVolume()
+                updateSoundVolume()
+            }
+        }
+    }
+
+    private fun updateMusicVolume() {
+        musicPlayer?.setVolume(musicVolume, musicVolume)
+    }
+
+    private fun updateSoundVolume() {
+        sfxPlayer?.setVolume(soundVolume, soundVolume)
+    }
 
     private var currentMusic: MusicTrack? = null
     private var currentSound: SoundCue? = null
