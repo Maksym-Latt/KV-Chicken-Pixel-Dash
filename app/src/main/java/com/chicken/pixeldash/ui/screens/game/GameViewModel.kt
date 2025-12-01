@@ -26,8 +26,8 @@ const val PLAYER_WIDTH = 70f
 const val PLAYER_HEIGHT = 80f
 const val PLAYER_X = 52f
 private const val GRAVITY = -1350f
-private const val JUMP_FORCE = 870f
-private const val HIGH_JUMP_FORCE = 1120f
+private const val JUMP_FORCE = 520f
+private const val HIGH_JUMP_FORCE = 820f
 private const val BASE_SPEED = 260f
 private const val SPEED_GROWTH = 8f
 private const val MAX_SPEED = 520f
@@ -39,9 +39,7 @@ const val BOX_WIDTH = 78f
 const val BOX_HEIGHT = 120f
 const val EGG_WIDTH = 40f
 const val EGG_HEIGHT = 48f
-const val MIN_GROUND_HEIGHT = 64f
-const val MAX_GROUND_HEIGHT = 140f
-private const val DEFAULT_GROUND_HEIGHT = 88f
+private const val DEFAULT_GROUND_HEIGHT = 140f
 
 enum class GameStatus { Ready, Running, Paused, Over }
 
@@ -300,11 +298,6 @@ class GameViewModel @Inject constructor(
             _uiState.value = state.copy(status = GameStatus.Paused)
             audioController.pauseMusic()
         }
-    }
-
-    fun setGroundHeight(height: Float) {
-        val clamped = height.coerceIn(MIN_GROUND_HEIGHT, MAX_GROUND_HEIGHT)
-        _uiState.value = _uiState.value.copy(groundHeight = clamped)
     }
 
     private suspend fun applyAudioVolumes() {
