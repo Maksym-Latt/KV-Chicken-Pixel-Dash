@@ -225,7 +225,7 @@ private fun BoxScope.Sprite(
 }
 
 @Composable
-private fun Ground(groundHeight: Dp) {
+private fun BoxScope.Ground(groundHeight: Dp) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -253,6 +253,7 @@ private fun Ground(groundHeight: Dp) {
         }
     }
 }
+
 
 @Composable
 private fun OverlayCard(
