@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -136,26 +135,6 @@ fun GameScreen(
                     )
                 }
 
-                Surface(color = Color(0xAAFFFFFF)) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = "Horizon height: ${state.groundHeight.toInt()}dp",
-                            fontFamily = retroFont,
-                            fontSize = 11.sp,
-                            color = Color(0xFF1D1100)
-                        )
-                        Slider(
-                            value = state.groundHeight,
-                            onValueChange = viewModel::setGroundHeight,
-                            valueRange = MIN_GROUND_HEIGHT..MAX_GROUND_HEIGHT
-                        )
-                    }
-                }
             }
 
             Box(
@@ -172,8 +151,8 @@ fun GameScreen(
                     }
                     Sprite(
                         painter = painter,
-                        width = obstacle.width.dp,
-                        height = obstacle.height.dp,
+                        width = (obstacle.width * obstacle.sizeScale).dp,
+                        height = (obstacle.height * obstacle.sizeScale).dp,
                         x = obstacle.x.dp,
                         groundTop = groundTop,
                         spriteY = obstacle.y.dp
@@ -183,8 +162,8 @@ fun GameScreen(
                 state.eggs.forEach { egg ->
                     Sprite(
                         painter = painterResource(id = R.drawable.item_egg),
-                        width = egg.width.dp,
-                        height = egg.height.dp,
+                        width = (egg.width * egg.sizeScale).dp,
+                        height = (egg.height * egg.sizeScale).dp,
                         x = egg.x.dp,
                         groundTop = groundTop,
                         spriteY = egg.y.dp

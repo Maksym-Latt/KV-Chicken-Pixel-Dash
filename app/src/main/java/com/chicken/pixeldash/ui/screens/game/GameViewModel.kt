@@ -22,9 +22,17 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-const val PLAYER_WIDTH = 70f
-const val PLAYER_HEIGHT = 80f
+private const val DEFAULT_SIZE_SCALE = 1f
+private const val DEFAULT_COLLIDER_SCALE = 0.8f
+
+private const val PLAYER_BASE_WIDTH = 70f
+private const val PLAYER_BASE_HEIGHT = 80f
+private const val PLAYER_SIZE_SCALE = DEFAULT_SIZE_SCALE
+const val PLAYER_WIDTH = PLAYER_BASE_WIDTH * PLAYER_SIZE_SCALE
+const val PLAYER_HEIGHT = PLAYER_BASE_HEIGHT * PLAYER_SIZE_SCALE
 const val PLAYER_X = 52f
+private const val PLAYER_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
+
 private const val GRAVITY = -1350f
 private const val JUMP_FORCE = 870f
 private const val HIGH_JUMP_FORCE = 1120f
@@ -33,19 +41,38 @@ private const val SPEED_GROWTH = 8f
 private const val MAX_SPEED = 520f
 private const val TIME_SCORE_RATE = 12f
 private const val EGG_SCORE_VALUE = 10
-const val ROCK_WIDTH = 64f
-const val ROCK_HEIGHT = 44f
-const val BOX_WIDTH = 78f
-const val BOX_HEIGHT = 120f
+
+private const val ROCK_BASE_WIDTH = 64f
+private const val ROCK_BASE_HEIGHT = 44f
+private const val ROCK_SIZE_SCALE = DEFAULT_SIZE_SCALE
+private const val ROCK_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
+const val ROCK_WIDTH = ROCK_BASE_WIDTH * ROCK_SIZE_SCALE
+const val ROCK_HEIGHT = ROCK_BASE_HEIGHT * ROCK_SIZE_SCALE
+
+private const val BOX_BASE_WIDTH = 78f
+private const val BOX_BASE_HEIGHT = 120f
+private const val BOX_SIZE_SCALE = DEFAULT_SIZE_SCALE
+private const val BOX_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
+const val BOX_WIDTH = BOX_BASE_WIDTH * BOX_SIZE_SCALE
+const val BOX_HEIGHT = BOX_BASE_HEIGHT * BOX_SIZE_SCALE
+
+private const val EGG_SIZE_SCALE = DEFAULT_SIZE_SCALE
+private const val EGG_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
 const val EGG_WIDTH = 40f
 const val EGG_HEIGHT = 48f
-const val MIN_GROUND_HEIGHT = 64f
-const val MAX_GROUND_HEIGHT = 140f
-private const val DEFAULT_GROUND_HEIGHT = 88f
+
+private const val DEFAULT_GROUND_HEIGHT = 140f
 
 enum class GameStatus { Ready, Running, Paused, Over }
 
 enum class EntityType { Rock, Box, Egg }
+
+private data class EntityTemplate(
+    val width: Float,
+    val height: Float,
+    val sizeScale: Float,
+    val colliderScale: Float
+)
 
 data class Entity(
     val id: Int,
@@ -53,7 +80,9 @@ data class Entity(
     val x: Float,
     val y: Float,
     val width: Float,
-    val height: Float
+    val height: Float,
+    val sizeScale: Float = DEFAULT_SIZE_SCALE,
+    val colliderScale: Float = DEFAULT_COLLIDER_SCALE
 )
 
 data class GameUiState(
@@ -191,18 +220,21 @@ class GameViewModel @Inject constructor(
 
         val movedObstacles = state.obstacles.mapNotNull { entity ->
             val nextX = entity.x - speed * dt
-            if (nextX + entity.width < 0f) null else entity.copy(x = nextX)
+            val widthWithScale = entity.width * entity.sizeScale
+            if (nextX + widthWithScale < 0f) null else entity.copy(x = nextX)
         }
         val movedEggs = state.eggs.mapNotNull { entity ->
             val nextX = entity.x - speed * dt
-            if (nextX + entity.width < 0f) null else entity.copy(x = nextX)
+            val widthWithScale = entity.width * entity.sizeScale
+            if (nextX + widthWithScale < 0f) null else entity.copy(x = nextX)
         }
 
-        val playerRect = Rect(
-            left = PLAYER_X,
-            top = newY,
-            right = PLAYER_X + PLAYER_WIDTH,
-            bottom = newY + PLAYER_HEIGHT
+        val playerRect = scaledRect(
+            x = PLAYER_X,
+            y = newY,
+            width = PLAYER_WIDTH,
+            height = PLAYER_HEIGHT,
+            colliderScale = PLAYER_COLLIDER_SCALE
         )
 
         val (survivingEggs, collectedEggs) = movedEggs.partition { !intersects(playerRect, it.toRect()) }
@@ -242,33 +274,38 @@ class GameViewModel @Inject constructor(
 
     private fun spawnObstacle() {
         val type = if (Random.nextFloat() > 0.45f) EntityType.Rock else EntityType.Box
-        val (width, height) = when (type) {
-            EntityType.Rock -> ROCK_WIDTH to ROCK_HEIGHT
-            EntityType.Box -> BOX_WIDTH to BOX_HEIGHT
-            else -> ROCK_WIDTH to ROCK_HEIGHT
+        val template = when (type) {
+            EntityType.Rock -> EntityTemplate(ROCK_BASE_WIDTH, ROCK_BASE_HEIGHT, ROCK_SIZE_SCALE, ROCK_COLLIDER_SCALE)
+            EntityType.Box -> EntityTemplate(BOX_BASE_WIDTH, BOX_BASE_HEIGHT, BOX_SIZE_SCALE, BOX_COLLIDER_SCALE)
+            else -> EntityTemplate(ROCK_BASE_WIDTH, ROCK_BASE_HEIGHT, ROCK_SIZE_SCALE, ROCK_COLLIDER_SCALE)
         }
-        val spawnX = viewportWidth + width + 12f
+        val spawnX = viewportWidth + (template.width * template.sizeScale) + 12f
         val newObstacle = Entity(
             id = Random.nextInt(),
             type = type,
             x = spawnX,
             y = 0f,
-            width = width,
-            height = height
+            width = template.width,
+            height = template.height,
+            sizeScale = template.sizeScale,
+            colliderScale = template.colliderScale
         )
         _uiState.value = _uiState.value.copy(obstacles = _uiState.value.obstacles + newObstacle)
     }
 
     private fun spawnEgg(speed: Float) {
-        val maxAirRoom = (viewportHeight / 3f).coerceAtLeast(EGG_HEIGHT.toFloat())
+        val maxAirRoom = (viewportHeight / 3f).coerceAtLeast(EGG_HEIGHT * EGG_SIZE_SCALE)
         val offsetY = if (speed > 520f) maxAirRoom else maxAirRoom / 2f
+        val scaledEggWidth = EGG_WIDTH * EGG_SIZE_SCALE
         val newEgg = Entity(
             id = Random.nextInt(),
             type = EntityType.Egg,
-            x = viewportWidth + EGG_WIDTH + 24f,
+            x = viewportWidth + scaledEggWidth + 24f,
             y = offsetY,
             width = EGG_WIDTH,
-            height = EGG_HEIGHT
+            height = EGG_HEIGHT,
+            sizeScale = EGG_SIZE_SCALE,
+            colliderScale = EGG_COLLIDER_SCALE
         )
         _uiState.value = _uiState.value.copy(eggs = _uiState.value.eggs + newEgg)
     }
@@ -302,11 +339,6 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    fun setGroundHeight(height: Float) {
-        val clamped = height.coerceIn(MIN_GROUND_HEIGHT, MAX_GROUND_HEIGHT)
-        _uiState.value = _uiState.value.copy(groundHeight = clamped)
-    }
-
     private suspend fun applyAudioVolumes() {
         audioController.setMusicVolume(if (settingsRepository.musicEnabled.first()) 100 else 0)
         audioController.setSoundVolume(if (settingsRepository.soundEnabled.first()) 100 else 0)
@@ -315,7 +347,26 @@ class GameViewModel @Inject constructor(
 
 private data class Rect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
-private fun Entity.toRect(): Rect = Rect(x, y, x + width, y + height)
+private fun Entity.toRect(): Rect = scaledRect(x, y, width * sizeScale, height * sizeScale, colliderScale)
+
+private fun scaledRect(
+    x: Float,
+    y: Float,
+    width: Float,
+    height: Float,
+    colliderScale: Float
+): Rect {
+    val scaledWidth = width * colliderScale
+    val scaledHeight = height * colliderScale
+    val offsetX = (width - scaledWidth) / 2f
+    val offsetY = (height - scaledHeight) / 2f
+    return Rect(
+        left = x + offsetX,
+        top = y + offsetY,
+        right = x + offsetX + scaledWidth,
+        bottom = y + offsetY + scaledHeight
+    )
+}
 
 private fun intersects(a: Rect, b: Rect): Boolean {
     val horizontal = a.left < b.right && a.right > b.left
