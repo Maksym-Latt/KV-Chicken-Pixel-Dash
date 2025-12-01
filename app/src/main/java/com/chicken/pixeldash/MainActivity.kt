@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.chicken.pixeldash.ui.navigation.AppRoot
 import com.chicken.pixeldash.ui.theme.ChickenPixelDashTheme
 import com.chicken.pixeldash.audio.AudioController
 import dagger.hilt.android.AndroidEntryPoint

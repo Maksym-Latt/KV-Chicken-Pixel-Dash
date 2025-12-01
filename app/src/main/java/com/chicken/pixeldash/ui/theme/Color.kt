@@ -2,10 +2,10 @@ package com.chicken.pixeldash.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
-
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val RetroYellow = Color(0xFFFFE66D)
+val RetroBrown = Color(0xFF5A3C00)
+val RetroSky = Color(0xFF8ED0FF)
+val RetroGrass = Color(0xFF6BCB4B)
+val RetroDark = Color(0xFF1A1200)
+val RetroPanel = Color(0xFFDAC17F)
+val RetroShadow = Color(0xFF403016)
