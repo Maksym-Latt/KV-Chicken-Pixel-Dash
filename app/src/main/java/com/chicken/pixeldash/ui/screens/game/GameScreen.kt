@@ -167,7 +167,6 @@ fun GameScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
-
             }
 
             Box(
@@ -175,8 +174,6 @@ fun GameScreen(
                     .fillMaxSize()
                     .padding(horizontal = 12.dp)
             ) {
-                Ground(groundHeight = groundHeight)
-
                 state.obstacles.forEach { obstacle ->
                     val painter = when (obstacle.type) {
                         EntityType.Box -> painterResource(id = R.drawable.item_box)
@@ -273,63 +270,14 @@ private fun BoxScope.Sprite(
     Box(
         modifier = Modifier
             .offset(x = x, y = yOffset)
-            .size(width = scaledWidth, height = scaledHeight)
-    ) {
-        Image(
-            painter = painter,
-            contentDescription = null,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    if (bouncing) {
-                        translationY = (-spriteY.value * 0.04f)
-                    }
-                },
-            contentScale = ContentScale.Fit
-        )
-
-        if (showHitbox) {
-            Box(
-                modifier = Modifier
-                    .offset(x = colliderOffsetX, y = colliderOffsetY)
-                    .size(width = colliderWidth, height = colliderHeight)
-                    .border(width = 1.dp, color = Color.Red)
-                    .background(Color.Red.copy(alpha = 0.25f))
-            )
-        }
-    }
+            .graphicsLayer {
+                if (bouncing) {
+                    translationY = (-spriteY.value * 0.04f)
+                }
+            },
+        contentScale = ContentScale.Crop
+    )
 }
-
-@Composable
-private fun BoxScope.Ground(groundHeight: Dp) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(groundHeight)
-            .align(Alignment.BottomCenter)
-            .background(Color(0xFF4F993A))
-    ) {
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            repeat(18) {
-                Box(
-                    modifier = Modifier
-                        .height(18.dp)
-                        .weight(1f)
-                        .background(
-                            color = if (it % 2 == 0) Color(0xFF66B44A) else Color(0xFF5CA646),
-                            shape = RoundedCornerShape(topStart = 2.dp, topEnd = 2.dp)
-                        )
-                )
-            }
-        }
-    }
-}
-
 
 @Composable
 private fun OverlayCard(

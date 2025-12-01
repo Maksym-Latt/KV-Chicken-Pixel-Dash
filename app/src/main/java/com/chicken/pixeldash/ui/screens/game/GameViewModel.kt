@@ -30,23 +30,19 @@ const val PLAYER_X = 52f
 const val PLAYER_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
 
 private const val GRAVITY = -1350f
-private const val JUMP_FORCE = 870f
-private const val HIGH_JUMP_FORCE = 1120f
+private const val JUMP_FORCE = 520f
+private const val HIGH_JUMP_FORCE = 820f
 private const val BASE_SPEED = 260f
 private const val SPEED_GROWTH = 8f
 private const val MAX_SPEED = 520f
 private const val TIME_SCORE_RATE = 12f
 private const val EGG_SCORE_VALUE = 10
-
-private const val ROCK_SIZE_SCALE = DEFAULT_SIZE_SCALE
-private const val ROCK_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
-
-private const val BOX_SIZE_SCALE = DEFAULT_SIZE_SCALE
-private const val BOX_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
-
-private const val EGG_SIZE_SCALE = DEFAULT_SIZE_SCALE
-private const val EGG_COLLIDER_SCALE = DEFAULT_COLLIDER_SCALE
-
+const val ROCK_WIDTH = 64f
+const val ROCK_HEIGHT = 44f
+const val BOX_WIDTH = 78f
+const val BOX_HEIGHT = 120f
+const val EGG_WIDTH = 40f
+const val EGG_HEIGHT = 48f
 private const val DEFAULT_GROUND_HEIGHT = 140f
 
 enum class GameStatus { Ready, Running, Paused, Over }
