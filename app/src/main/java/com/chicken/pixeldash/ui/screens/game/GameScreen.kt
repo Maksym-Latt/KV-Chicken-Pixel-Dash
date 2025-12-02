@@ -1,6 +1,6 @@
 package com.chicken.pixeldash.ui.screens.game
 
-import android.R.attr.startY
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -79,6 +79,15 @@ fun GameScreen(
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    BackHandler {
+        if (state.status == GameStatus.Running) {
+            viewModel.togglePause()
+        } else {
+            viewModel.onExit()
+            onExit()
+        }
     }
 
     LaunchedEffect(Unit) { viewModel.restart() }
@@ -228,12 +237,12 @@ fun GameScreen(
                         viewModel.onExit()
                         onExit()
                     },
-                    musicEnabled = TODO(),
-                    soundsEnabled = TODO(),
-                    onToggleMusic = TODO(),
-                    onToggleSounds = TODO(),
-                    onRestart = TODO(),
-                    onResume = TODO()
+                    musicEnabled = state.musicEnabled,
+                    soundsEnabled = state.soundEnabled,
+                    onToggleMusic = viewModel::toggleMusic,
+                    onToggleSounds = viewModel::toggleSound,
+                    onRestart = viewModel::restart,
+                    onResume = viewModel::togglePause
                 )
             }
 
