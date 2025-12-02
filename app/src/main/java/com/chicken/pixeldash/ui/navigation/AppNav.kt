@@ -1,16 +1,12 @@
 package com.chicken.pixeldash.ui.navigation
 
-import androidx.compose.animation.AnimatedContentScope
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.chicken.pixeldash.ui.screens.intro.IntroScreen
 import com.chicken.pixeldash.ui.screens.game.GameScreen
 import com.chicken.pixeldash.ui.screens.menu.MenuScreen
 import com.chicken.pixeldash.ui.screens.scores.ScoreScreen
@@ -18,8 +14,11 @@ import com.chicken.pixeldash.ui.screens.skins.SkinsScreen
 import com.chicken.pixeldash.ui.screens.game.GameViewModel
 import com.chicken.pixeldash.ui.screens.menu.MenuViewModel
 import com.chicken.pixeldash.ui.screens.skins.SkinsViewModel
+import com.chicken.pixeldash.ui.screens.splash.SplashScreen
 
 sealed class Screen(val route: String) {
+    data object Splash : Screen("splash")
+    data object Intro : Screen("intro")
     data object Menu : Screen("menu")
     data object Game : Screen("game")
     data object Skins : Screen("skins")
@@ -28,7 +27,25 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun AppRoot(navController: NavHostController = rememberNavController()) {
-    NavHost(navController = navController, startDestination = Screen.Menu.route) {
+    NavHost(navController = navController, startDestination = Screen.Splash.route) {
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                onFinished = {
+                    navController.navigate(Screen.Intro.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Screen.Intro.route) {
+            IntroScreen(
+                onStart = {
+                    navController.navigate(Screen.Menu.route) {
+                        popUpTo(Screen.Intro.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(Screen.Menu.route) {
             val vm: MenuViewModel = hiltViewModel()
             MenuScreen(

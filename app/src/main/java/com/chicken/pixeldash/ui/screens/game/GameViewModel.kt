@@ -119,12 +119,17 @@ class GameViewModel @Inject constructor(
         audioController.playChickenJump()
     }
 
-    fun togglePause() {
+    fun pauseGame() {
         val state = _uiState.value
         if (state.status == GameStatus.Running) {
             _uiState.value = state.copy(status = GameStatus.Paused)
             audioController.pauseMusic()
-        } else if (state.status == GameStatus.Paused) {
+        }
+    }
+
+    fun resumeGame() {
+        val state = _uiState.value
+        if (state.status == GameStatus.Paused) {
             _uiState.value = state.copy(status = GameStatus.Running)
             audioController.resumeMusic()
         }
@@ -316,18 +321,20 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    fun resumeAfterPause() {
-        val state = _uiState.value
-        if (state.status == GameStatus.Paused) {
-            _uiState.value = state.copy(status = GameStatus.Running)
-            audioController.resumeMusic()
-        }
-    }
-
     fun pauseFromLifecycle() {
         val state = _uiState.value
         if (state.status == GameStatus.Running) {
-            _uiState.value = state.copy(status = GameStatus.Paused)
+            pauseGame()
+        } else {
+            audioController.pauseMusic()
+        }
+    }
+
+    fun handleResumeLifecycle() {
+        val state = _uiState.value
+        if (state.status == GameStatus.Running) {
+            audioController.resumeMusic()
+        } else {
             audioController.pauseMusic()
         }
     }
