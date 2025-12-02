@@ -6,7 +6,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import com.chicken.pixeldash.ui.screens.intro.IntroScreen
 import com.chicken.pixeldash.ui.screens.game.GameScreen
 import com.chicken.pixeldash.ui.screens.menu.MenuScreen
 import com.chicken.pixeldash.ui.screens.scores.ScoreScreen
@@ -18,7 +17,6 @@ import com.chicken.pixeldash.ui.screens.splash.SplashScreen
 
 sealed class Screen(val route: String) {
     data object Splash : Screen("splash")
-    data object Intro : Screen("intro")
     data object Menu : Screen("menu")
     data object Game : Screen("game")
     data object Skins : Screen("skins")
@@ -31,17 +29,8 @@ fun AppRoot(navController: NavHostController = rememberNavController()) {
         composable(Screen.Splash.route) {
             SplashScreen(
                 onFinished = {
-                    navController.navigate(Screen.Intro.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-        composable(Screen.Intro.route) {
-            IntroScreen(
-                onStart = {
                     navController.navigate(Screen.Menu.route) {
-                        popUpTo(Screen.Intro.route) { inclusive = true }
+                        popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
             )
