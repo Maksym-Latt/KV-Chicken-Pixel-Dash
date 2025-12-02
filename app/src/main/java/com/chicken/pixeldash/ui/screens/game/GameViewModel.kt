@@ -52,6 +52,8 @@ data class GameUiState(
     val bestScore: Int = 0,
     val status: GameStatus = GameStatus.Ready,
     val skin: Skin = SkinCatalog.allSkins.first(),
+    val musicEnabled: Boolean = true,
+    val soundEnabled: Boolean = true,
     val playerY: Float = 0f,
     val playerFrame: Int = 0,
     val speed: Float = BASE_SPEED,
@@ -73,11 +75,15 @@ class GameViewModel @Inject constructor(
     val uiState: StateFlow<GameUiState> = combine(
         _uiState,
         playerRepository.bestScore,
-        playerRepository.selectedSkin
-    ) { state, best, skinId ->
+        playerRepository.selectedSkin,
+        settingsRepository.musicEnabled,
+        settingsRepository.soundEnabled
+    ) { state, best, skinId, musicEnabled, soundEnabled ->
         state.copy(
             bestScore = max(best, state.bestScore),
-            skin = SkinCatalog.findById(skinId)
+            skin = SkinCatalog.findById(skinId),
+            musicEnabled = musicEnabled,
+            soundEnabled = soundEnabled
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, GameUiState())
 
@@ -121,6 +127,28 @@ class GameViewModel @Inject constructor(
         } else if (state.status == GameStatus.Paused) {
             _uiState.value = state.copy(status = GameStatus.Running)
             audioController.resumeMusic()
+        }
+    }
+
+    fun toggleMusic() {
+        viewModelScope.launch {
+            val enabled = uiState.value.musicEnabled
+            settingsRepository.setMusicEnabled(!enabled)
+            applyAudioVolumes()
+            val state = _uiState.value
+            if (enabled) {
+                audioController.pauseMusic()
+            } else if (state.status == GameStatus.Running) {
+                audioController.playGameMusic()
+            }
+        }
+    }
+
+    fun toggleSound() {
+        viewModelScope.launch {
+            val enabled = uiState.value.soundEnabled
+            settingsRepository.setSoundEnabled(!enabled)
+            applyAudioVolumes()
         }
     }
 
