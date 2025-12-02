@@ -72,7 +72,7 @@ fun GameScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> viewModel.resumeAfterPause()
+                Lifecycle.Event.ON_RESUME -> viewModel.handleResumeLifecycle()
                 Lifecycle.Event.ON_PAUSE -> viewModel.pauseFromLifecycle()
                 else -> Unit
             }
@@ -83,7 +83,7 @@ fun GameScreen(
 
     BackHandler {
         if (state.status == GameStatus.Running) {
-            viewModel.togglePause()
+            viewModel.pauseGame()
         } else {
             viewModel.onExit()
             onExit()
@@ -148,7 +148,7 @@ fun GameScreen(
             ) {
                 IconOvalButton(
                     modifier = Modifier.size(60.dp),
-                    onClick = viewModel::togglePause,
+                    onClick = viewModel::pauseGame,
                     cornerRadius = 22.dp,
                     borderWidth = 3.dp,
                     icon = {
@@ -242,7 +242,7 @@ fun GameScreen(
                     onToggleMusic = viewModel::toggleMusic,
                     onToggleSounds = viewModel::toggleSound,
                     onRestart = viewModel::restart,
-                    onResume = viewModel::togglePause
+                    onResume = viewModel::resumeGame
                 )
             }
 
