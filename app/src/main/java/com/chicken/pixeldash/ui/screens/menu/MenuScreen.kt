@@ -12,14 +12,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,6 +33,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -40,26 +46,25 @@ import com.chicken.pixeldash.ui.components.EggCounter
 import com.chicken.pixeldash.ui.components.PixelButton
 import com.chicken.pixeldash.ui.components.SoundToggle
 import com.chicken.pixeldash.ui.components.GradientText
+import com.chicken.pixeldash.ui.components.PlayButton
 import com.chicken.pixeldash.ui.theme.retroFont
-
 @Composable
 fun MenuScreen(
     viewModel: MenuViewModel,
     onPlay: () -> Unit,
-    onSkins: () -> Unit,
-    onScores: () -> Unit
+    onSkins: () -> Unit
 ) {
     val state by viewModel.uiState.collectAsState()
 
-    val infiniteTransition = rememberInfiniteTransition(label = "bounce")
+    val infiniteTransition = rememberInfiniteTransition(label = "")
     val bounce by infiniteTransition.animateFloat(
         initialValue = 0f,
-        targetValue = 12f,
+        targetValue = 10f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
+            tween(950, easing = FastOutSlowInEasing),
+            RepeatMode.Reverse
         ),
-        label = "bounceAnim"
+        label = ""
     )
 
     Box(
@@ -72,26 +77,58 @@ fun MenuScreen(
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
-            alpha = 0.6f
+            alpha = 0.7f
         )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 20.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .padding(horizontal = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(40.dp))
-            GradientText(text = "CHICKEN", size = 38.sp)
-            GradientText(text = "PIXEL DASH", size = 36.sp, stroke = 6f)
+            Spacer(modifier = Modifier.weight(2f))
 
-            Spacer(modifier = Modifier.height(28.dp))
+            GradientText(
+                text = "CHICKEN",
+                size = 46.sp,
+                stroke = 15f,
+                strokeColor = Color(0xFF1C1C1C)
+            )
+
+            GradientText(
+                text = "PIXEL",
+                size = 32.sp,
+                stroke = 15f,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFFEBE76E), Color(0xFFAEAB26))
+                ),
+                strokeColor = Color(0xFF1C1C1C)
+            )
+
+            GradientText(
+                text = "DASH",
+                size = 32.sp,
+                stroke = 15f,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFF8B8942), Color(0xFF727019))
+                ),
+                strokeColor = Color(0xFF1C1C1C)
+            )
+
+            Spacer(modifier = Modifier.weight(3f))
+
+            PlayButton(
+                modifier = Modifier
+                    .fillMaxWidth(0.3f)
+                    .aspectRatio(1.2f),
+                onClick = onPlay
+            )
+
+            Spacer(modifier = Modifier.weight(3f))
 
             Box(
                 modifier = Modifier
-                    .size(180.dp)
+                    .size(110.dp)
                     .offset(y = bounce.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -103,41 +140,17 @@ fun MenuScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
-            Surface(color = Color(0xAAFFFFFF)) {
-                Text(
-                    text = "Skin: ${state.selectedSkinName}",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-                    fontFamily = retroFont,
-                    fontWeight = FontWeight.Medium,
-                    fontSize = 12.sp,
-                    color = Color(0xFF1A1200)
-                )
-            }
-            Spacer(modifier = Modifier.height(12.dp))
-            EggCounter(value = state.coins)
+            Spacer(modifier = Modifier.weight(1.2f))
 
-            Spacer(modifier = Modifier.height(16.dp))
-            PixelButton(text = "Play", onClick = onPlay)
-            Spacer(modifier = Modifier.height(8.dp))
-            PixelButton(text = "Skins", onClick = onSkins)
-            Spacer(modifier = Modifier.height(8.dp))
-            PixelButton(text = "Scores", onClick = onScores)
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Best: ${state.bestScore}",
-                fontFamily = retroFont,
-                fontSize = 12.sp,
-                color = Color(0xFF1C1200)
+            PixelButton(
+                text = "Shop",
+                onClick = onSkins,
+                modifier = Modifier
+                    .fillMaxWidth(0.5f)
+                    .height(54.dp)
             )
-            Spacer(modifier = Modifier.height(12.dp))
-            SoundToggle(
-                musicEnabled = state.musicEnabled,
-                soundEnabled = state.soundEnabled,
-                onToggleMusic = viewModel::toggleMusic,
-                onToggleSound = viewModel::toggleSound
-            )
-            Spacer(modifier = Modifier.height(32.dp))
+
+            Spacer(modifier = Modifier.weight(0.7f))
         }
     }
 }

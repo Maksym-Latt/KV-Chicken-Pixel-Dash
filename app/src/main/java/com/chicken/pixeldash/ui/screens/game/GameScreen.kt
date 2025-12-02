@@ -1,8 +1,10 @@
 package com.chicken.pixeldash.ui.screens.game
 
+import android.R.attr.startY
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +20,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
@@ -29,10 +36,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -46,6 +55,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.chicken.pixeldash.R
 import com.chicken.pixeldash.ui.components.EggCounter
+import com.chicken.pixeldash.ui.components.GradientText
+import com.chicken.pixeldash.ui.components.IconOvalButton
 import com.chicken.pixeldash.ui.components.PixelButton
 import com.chicken.pixeldash.ui.components.ScorePill
 import com.chicken.pixeldash.ui.theme.retroFont
@@ -57,7 +68,6 @@ fun GameScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
-    var showHitboxes by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -71,19 +81,33 @@ fun GameScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    LaunchedEffect(Unit) {
-        viewModel.restart()
-    }
+    LaunchedEffect(Unit) { viewModel.restart() }
+
+    var startY by remember { mutableStateOf<Float?>(null) }
+    var hasJumped by remember { mutableStateOf(false) }
 
     Surface(color = Color(0xFF74C2E4)) {
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    detectTapGestures(
-                        onTap = { viewModel.jump(high = false) },
-                        onLongPress = { viewModel.jump(high = true) }
-                    )
+                    detectDragGestures(
+                        onDragStart = { startY = it.y; hasJumped = false },
+                        onDragCancel = { startY = null },
+                        onDragEnd = { startY = null }
+                    ) { change, _ ->
+                        if (startY != null && !hasJumped) {
+                            val dy = startY!! - change.position.y
+                            if (dy > 70f) {
+                                viewModel.jump(true)
+                                hasJumped = true
+                                startY = null
+                            }
+                        }
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures { viewModel.jump(false) }
                 }
         ) {
             val groundHeight = state.groundHeight.dp
@@ -93,141 +117,147 @@ fun GameScreen(
                 viewModel.onViewportChanged(maxWidth.value, maxHeight.value)
             }
 
+            // BACKGROUND
             Image(
                 painter = painterResource(id = R.drawable.bg),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.7f
+                alpha = 0.6f
             )
 
-            Column(
+            // ───────────────────────────────
+            // TOP BAR — кнопка паузы и Score
+            // ───────────────────────────────
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .padding(12.dp)
                     .align(Alignment.TopCenter),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    ScorePill(label = "Score", value = state.score)
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        ScorePill(label = "Best", value = state.bestScore)
-                        EggCounter(value = state.eggsCollected)
+                IconOvalButton(
+                    modifier = Modifier.size(60.dp),
+                    onClick = viewModel::togglePause,
+                    cornerRadius = 22.dp,
+                    borderWidth = 3.dp,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Pause,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.fillMaxSize(0.55f)
+                        )
                     }
-                }
+                )
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    PixelButton(
-                        text = if (state.status == GameStatus.Paused) "Resume" else "Pause",
-                        onClick = viewModel::togglePause,
-                        modifier = Modifier.weight(1f)
+                Column(horizontalAlignment = Alignment.End) {
+                    GradientText(
+                        text = "Score : ${state.score}",
+                        size = 18.sp,
+                        expand = false,
+                        stroke = 6f
                     )
-                    PixelButton(
-                        text = "Menu",
-                        onClick = {
-                            viewModel.onExit()
-                            onExit()
-                        },
-                        modifier = Modifier.weight(1f)
-                    )
-                    PixelButton(
-                        text = if (showHitboxes) "Hitbox: On" else "Hitbox: Off",
-                        onClick = { showHitboxes = !showHitboxes },
-                        modifier = Modifier.weight(1f)
-                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        GradientText(
+                            text = "${state.eggsCollected}",
+                            size = 16.sp,
+                            expand = false,
+                            stroke = 5f
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.item_egg),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
             }
 
+            // ───────────────────────────────
+            // GAME SPRITES
+            // ───────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 12.dp)
             ) {
-                state.obstacles.forEach { obstacle ->
-                    val painter = when (obstacle.type) {
-                        EntityType.Box -> painterResource(id = R.drawable.item_box)
-                        else -> painterResource(id = R.drawable.item_rock)
-                    }
-                    val spriteSize = obstacle.spriteSize()
+
+                // obstacles
+                state.obstacles.forEach { o ->
                     Sprite(
-                        painter = painter,
-                        spriteSize = spriteSize,
-                        x = obstacle.x,
+                        painter = painterResource(
+                            if (o.type == EntityType.Box) R.drawable.item_box
+                            else R.drawable.item_rock
+                        ),
+                        spriteSize = o.spriteSize(),
+                        x = o.x,
                         groundTop = groundTop,
-                        spriteY = obstacle.y,
-                        showHitbox = showHitboxes,
-                        hitbox = obstacle.hitboxRect()
+                        spriteY = o.y
                     )
                 }
 
+                // eggs
                 state.eggs.forEach { egg ->
-                    val spriteSize = egg.spriteSize()
                     Sprite(
-                        painter = painterResource(id = R.drawable.item_egg),
-                        spriteSize = spriteSize,
+                        painter = painterResource(R.drawable.item_egg),
+                        spriteSize = egg.spriteSize(),
                         x = egg.x,
                         groundTop = groundTop,
-                        spriteY = egg.y,
-                        showHitbox = showHitboxes,
-                        hitbox = egg.hitboxRect()
+                        spriteY = egg.y
                     )
                 }
 
-                val chickenPainter = painterResource(id = state.skin.drawable)
-                val chickenSpriteSize = playerSpriteSize(state.playerSizeScale)
+                // player
                 Sprite(
-                    painter = chickenPainter,
-                    spriteSize = chickenSpriteSize,
+                    painter = painterResource(id = state.skin.drawable),
+                    spriteSize = playerSpriteSize(),
                     x = PLAYER_X,
                     groundTop = groundTop,
                     spriteY = state.playerY,
-                    bouncing = state.status == GameStatus.Running,
-                    showHitbox = showHitboxes,
-                    hitbox = playerHitboxRect(state.playerY, state.playerSizeScale, state.playerHitboxScale)
+                    bouncing = state.status == GameStatus.Running
                 )
+            }
 
-                if (state.status == GameStatus.Paused) {
-                    OverlayCard(title = "Paused", subtitle = "Tap resume to keep running") {
-                        PixelButton(text = "Resume", onClick = viewModel::togglePause)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        PixelButton(text = "Restart", onClick = viewModel::restart)
-                    }
-                }
+            if (state.status == GameStatus.Paused) {
+                PauseMenu(
+                    onExit = {
+                        viewModel.onExit()
+                        onExit()
+                    },
+                    musicEnabled = TODO(),
+                    soundsEnabled = TODO(),
+                    onToggleMusic = TODO(),
+                    onToggleSounds = TODO(),
+                    onRestart = TODO(),
+                    onResume = TODO()
+                )
+            }
 
-                if (state.status == GameStatus.Over) {
-                    OverlayCard(title = "Game Over", subtitle = "Score ${state.score}") {
-                        Text(
-                            text = "Eggs: ${state.eggsCollected}",
-                            fontFamily = retroFont,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 14.sp,
-                            color = Color(0xFF1F1500)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        PixelButton(text = "Retry", onClick = viewModel::restart)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        PixelButton(text = "Menu", onClick = {
-                            viewModel.onExit()
-                            onExit()
-                        })
+
+            if (state.status == GameStatus.Over) {
+                GameOverScreen(
+                    score = state.score,
+                    eggs = state.eggsCollected,
+                    skinDrawable = state.skin.drawable,
+                    onRestart = viewModel::restart,
+                    onMenu = {
+                        viewModel.onExit()
+                        onExit()
                     }
-                }
+                )
             }
         }
     }
 }
 
+
 @Composable
 private fun BoxScope.Sprite(
-    painter: androidx.compose.ui.graphics.painter.Painter,
+    painter: Painter,
     spriteSize: Pair<Float, Float>,
     x: Float,
     groundTop: Dp,

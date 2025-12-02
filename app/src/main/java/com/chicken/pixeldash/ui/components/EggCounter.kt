@@ -1,5 +1,6 @@
 package com.chicken.pixeldash.ui.components
 
+import android.R.attr.strokeColor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.chicken.pixeldash.R
 import com.chicken.pixeldash.ui.theme.retroFont
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
 
 @Composable
 fun EggCounter(
@@ -27,16 +29,17 @@ fun EggCounter(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp)
     ) {
+        GradientText(
+            text = value.toString(),
+            size = 26.sp,
+            stroke = 1f,
+            expand = false,
+            strokeColor = Color(0xffffffff)
+        )
         Image(
             painter = painterResource(id = R.drawable.item_egg),
             contentDescription = null,
-            modifier = Modifier.size(26.dp)
-        )
-        Text(
-            text = value.toString(),
-            fontFamily = retroFont,
-            fontWeight = FontWeight.Black,
-            fontSize = 16.sp
+            modifier = Modifier.size(50.dp)
         )
     }
 }

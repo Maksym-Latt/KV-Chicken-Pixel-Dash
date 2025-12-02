@@ -35,7 +35,6 @@ fun AppRoot(navController: NavHostController = rememberNavController()) {
                 viewModel = vm,
                 onPlay = { navController.navigate(Screen.Game.route) },
                 onSkins = { navController.navigate(Screen.Skins.route) },
-                onScores = { navController.navigate(Screen.Scores.route) }
             )
         }
         composable(Screen.Game.route) {
