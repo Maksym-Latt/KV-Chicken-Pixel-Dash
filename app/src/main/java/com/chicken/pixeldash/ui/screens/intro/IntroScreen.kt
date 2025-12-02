@@ -2,6 +2,7 @@ package com.chicken.pixeldash.ui.screens.intro
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,13 +11,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Egg
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.TouchApp
@@ -26,7 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -35,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.chicken.pixeldash.R
 import com.chicken.pixeldash.ui.components.GradientText
+import com.chicken.pixeldash.ui.components.IconOvalButton
 import com.chicken.pixeldash.ui.components.PixelButton
 import com.chicken.pixeldash.ui.theme.retroFont
 
@@ -43,131 +48,108 @@ fun IntroOverlay(onStart: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0x88000000)),
-        contentAlignment = Alignment.Center
+            .background(Color(0x88000000))
     ) {
-        Surface(
+
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = Color(0xFFFBF5E9),
-            tonalElevation = 6.dp
-        ) {
-            Box {
-                Image(
-                    painter = painterResource(id = R.drawable.bg),
-                    contentDescription = null,
-                    modifier = Modifier.matchParentSize(),
-                    contentScale = ContentScale.Crop,
-                    alpha = 0.2f
+                .align(Alignment.Center)
+                .fillMaxWidth(0.8f)
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0xFFF7EF7A),
+                            Color(0xFFBDB63D)
+                        )
+                    ),
+                    RoundedCornerShape(28.dp)
                 )
+                .border(3.dp, Color.Black, RoundedCornerShape(28.dp))
+                .padding(26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
 
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 18.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Spacer(modifier = Modifier.height(4.dp))
+            GradientText(
+                text = "Ready?",
+                size = 40.sp,
+                stroke = 10f,
+                expand = false
+            )
 
-                    GradientText(
-                        text = "Ready to dash?",
-                        size = 34.sp,
-                        stroke = 10f,
-                        strokeColor = Color(0xFF1C1C1C)
-                    )
+            Spacer(Modifier.height(28.dp))
 
-                    Spacer(modifier = Modifier.height(12.dp))
+            IntroTip(
+                icon = Icons.Default.TouchApp,
+                text = "Tap to jump"
+            )
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color(0xFFFDF8E8), RoundedCornerShape(24.dp))
-                            .padding(horizontal = 18.dp, vertical = 20.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
-                    ) {
-                        IntroRow(
-                            icon = Icons.Default.TouchApp,
-                            title = "Tap",
-                            description = "Tap anywhere to jump over rocks and boxes"
-                        )
+            Spacer(Modifier.height(24.dp))
 
-                        IntroRow(
-                            icon = Icons.Default.ArrowUpward,
-                            title = "Swipe up",
-                            description = "Swipe up for a stronger jump when you need extra height"
-                        )
+            IntroTip(
+                icon = Icons.Default.KeyboardArrowUp,
+                text = "Swipe up = high jump"
+            )
 
-                        IntroRow(
-                            icon = Icons.Default.MusicNote,
-                            title = "Collect eggs",
-                            description = "Grab eggs for bonus points and coins to unlock new skins"
-                        )
-                    }
+            Spacer(Modifier.height(24.dp))
 
-                    Spacer(modifier = Modifier.height(18.dp))
+            IntroTip(
+                icon = Icons.Default.Egg,
+                text = "Collect eggs"
+            )
 
-                    Image(
-                        painter = painterResource(id = R.drawable.chicken_2),
-                        contentDescription = null,
-                        modifier = Modifier.size(120.dp),
-                        contentScale = ContentScale.Fit
-                    )
+            Spacer(Modifier.height(26.dp))
 
-                    Spacer(modifier = Modifier.height(18.dp))
+            Image(
+                painter = painterResource(id = R.drawable.chicken_2),
+                contentDescription = null,
+                modifier = Modifier.size(120.dp),
+                contentScale = ContentScale.Fit
+            )
 
-                    PixelButton(
-                        text = "Start",
-                        onClick = onStart,
-                        modifier = Modifier
-                            .fillMaxWidth(0.6f)
-                            .height(58.dp),
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.PlayArrow,
-                                contentDescription = null,
-                                tint = Color(0xFF1C1C1C),
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    )
-                }
-            }
+            Spacer(Modifier.height(26.dp))
+
+            PixelButton(
+                text = "Start",
+                onClick = onStart,
+                modifier = Modifier
+                    .fillMaxWidth(0.6f)
+                    .height(58.dp)
+            )
         }
     }
 }
-
 @Composable
-private fun IntroRow(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, description: String) {
+private fun IntroTip(
+    icon: ImageVector,
+    text: String
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = Color(0xFF1C1C1C),
-            modifier = Modifier.size(32.dp)
+
+        IconOvalButton(
+            modifier = Modifier.size(50.dp),
+            cornerRadius = 18.dp,
+            borderWidth = 3.dp,
+            onClick = { },
+            icon = {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = Color.Black,
+                    modifier = Modifier.fillMaxSize(0.55f)
+                )
+            }
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = title,
-                fontFamily = retroFont,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 18.sp,
-                color = Color(0xFF1C1C1C)
-            )
-            Text(
-                text = description,
-                fontFamily = retroFont,
-                fontSize = 14.sp,
-                color = Color(0xFF2B1A00),
-                textAlign = TextAlign.Start
-            )
-        }
+        GradientText(
+            text = text,
+            size = 16.sp,
+            stroke = 6f,
+            expand = true,
+            alignment = TextAlign.Start,
+        )
     }
 }

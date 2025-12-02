@@ -24,18 +24,18 @@ fun PixelSwitch(
     onToggle: () -> Unit
 ) {
     val bg = if (enabled)
-        Brush.verticalGradient(listOf(Color(0xFFFFE86A), Color(0xFFC9B637)))
+        Brush.verticalGradient(listOf(Color(0xFFFFE86A), Color(0xFF8C7D19)))
     else
         Brush.verticalGradient(listOf(Color(0xFFC9C9C9), Color(0xFF8F8F8F)))
 
-    val knobColor = if (enabled) Color(0xFFFFA800) else Color(0xFF555555)
+    val knobColor = if (enabled) Color(0xFFFF9800) else Color(0xFF555555)
 
     val alignment = if (enabled) Alignment.CenterEnd else Alignment.CenterStart
 
     Box(
         modifier = Modifier
-            .width(64.dp)
-            .height(32.dp)
+            .width(74.dp)
+            .height(42.dp)
             .clip(RoundedCornerShape(50))
             .background(bg)
             .border(3.dp, Color.Black, RoundedCornerShape(50))

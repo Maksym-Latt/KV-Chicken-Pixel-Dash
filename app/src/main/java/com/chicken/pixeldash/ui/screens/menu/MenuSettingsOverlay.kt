@@ -1,14 +1,12 @@
-package com.chicken.pixeldash.ui.screens.game
+package com.chicken.pixeldash.ui.screens.menu
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -16,19 +14,13 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -37,15 +29,14 @@ import com.chicken.pixeldash.ui.components.GradientText
 import com.chicken.pixeldash.ui.components.IconOvalButton
 import com.chicken.pixeldash.ui.components.PixelSwitch
 
+
 @Composable
-fun PauseMenu(
+internal fun MenuSettingsOverlay(
     musicEnabled: Boolean,
     soundsEnabled: Boolean,
     onToggleMusic: () -> Unit,
     onToggleSounds: () -> Unit,
-    onRestart: () -> Unit,
-    onResume: () -> Unit,
-    onExit: () -> Unit
+    onClose: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -57,7 +48,6 @@ fun PauseMenu(
             modifier = Modifier.fillMaxWidth(0.8f),
             contentAlignment = Alignment.TopEnd
         ) {
-
             Column(
                 modifier = Modifier
                     .background(
@@ -69,15 +59,15 @@ fun PauseMenu(
                         ),
                         RoundedCornerShape(28.dp)
                     )
-                    .border(6.dp, Color.Black, RoundedCornerShape(28.dp))
+                    .border(4.dp, Color.Black, RoundedCornerShape(28.dp))
                     .padding(26.dp),
                 horizontalAlignment = Alignment.Start
             ) {
 
                 GradientText(
-                    text = "Paused",
-                    size = 40.sp,
-                    stroke = 12f,
+                    text = "Settings",
+                    size = 30.sp,
+                    stroke = 10f,
                 )
 
                 Spacer(Modifier.height(22.dp))
@@ -119,57 +109,15 @@ fun PauseMenu(
                         onToggle = onToggleSounds
                     )
                 }
-
-                Spacer(Modifier.height(32.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-
-                    IconOvalButton(
-                        modifier = Modifier
-                            .fillMaxWidth(0.3f)
-                            .aspectRatio(1.2f),
-                        cornerRadius = 20.dp,
-                        borderWidth = 4.dp,
-                        onClick = onRestart,
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.fillMaxSize(0.65f)
-                            )
-                        }
-                    )
-
-                    IconOvalButton(
-                        modifier = Modifier
-                            .fillMaxWidth(0.43f)
-                            .aspectRatio(1.2f),
-                        cornerRadius = 20.dp,
-                        borderWidth = 4.dp,
-                        onClick = onExit,
-                        icon = {
-                            Icon(
-                                imageVector = Icons.Default.Home,
-                                contentDescription = null,
-                                tint = Color.Black,
-                                modifier = Modifier.fillMaxSize(0.65f)
-                            )
-                        }
-                    )
-                }
             }
 
             IconOvalButton(
                 modifier = Modifier
-                    .offset(x = 26.dp, y = (-26).dp)
-                    .size(64.dp),
-                cornerRadius = 40.dp,
+                    .offset(x = 24.dp, y = (-24).dp)
+                    .size(58.dp),
+                cornerRadius = 36.dp,
                 borderWidth = 4.dp,
-                onClick = onResume,
+                onClick = onClose,
                 icon = {
                     Icon(
                         imageVector = Icons.Default.Close,

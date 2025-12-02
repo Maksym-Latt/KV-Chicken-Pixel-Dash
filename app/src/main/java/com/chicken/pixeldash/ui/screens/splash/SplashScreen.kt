@@ -15,13 +15,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -31,74 +35,85 @@ import androidx.compose.ui.unit.sp
 import com.chicken.pixeldash.R
 import com.chicken.pixeldash.ui.components.GradientText
 import kotlinx.coroutines.delay
-
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
-    val infiniteTransition = rememberInfiniteTransition(label = "")
-    val bob by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 10f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = ""
-    )
 
     LaunchedEffect(Unit) {
-        delay(3000)
+        delay(2200)
         onFinished()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFF74C2E4), Color(0xFF7AD6FF))
-                )
-            )
+            .background(Color(0xFF74C2E4))
     ) {
         Image(
             painter = painterResource(id = R.drawable.bg),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
-            alpha = 0.55f
+            alpha = 0.65f
         )
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .align(Alignment.Center),
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.weight(2f))
+
+            Spacer(Modifier.weight(1f))
+
+            GradientText(
+                text = "CHICKEN",
+                size = 42.sp,
+                stroke = 14f,
+                strokeColor = Color(0xFF1C1C1C),
+            )
+
+            GradientText(
+                text = "PIXEL",
+                size = 30.sp,
+                stroke = 14f,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFFEBE76E), Color(0xFFAEAB26))
+                ),
+                strokeColor = Color(0xFF1C1C1C)
+            )
+
+            GradientText(
+                text = "DASH",
+                size = 30.sp,
+                stroke = 14f,
+                brush = Brush.horizontalGradient(
+                    listOf(Color(0xFF8B8942), Color(0xFF727019))
+                ),
+                strokeColor = Color(0xFF1C1C1C)
+            )
+
+            Spacer(Modifier.weight(2.5f))
 
             Image(
                 painter = painterResource(id = R.drawable.chicken_1),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(140.dp)
-                    .offset(y = bob.dp),
+                    .size(160.dp),
                 contentScale = ContentScale.Fit
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            GradientText(text = "Chicken Pixel Dash", size = 30.sp, stroke = 12f)
-
-            Spacer(modifier = Modifier.weight(1.2f))
+            Spacer(Modifier.weight(2.5f))
 
             LinearProgressIndicator(
                 modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(10.dp),
+                    .fillMaxWidth(0.55f)
+                    .height(12.dp)
+                    .clip(RoundedCornerShape(6.dp)),
                 color = Color(0xFFE6DB6F),
-                trackColor = Color(0xFF245775)
+                trackColor = Color(0xFF2F6A8A)
             )
 
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(Modifier.weight(1f))
         }
     }
 }

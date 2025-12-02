@@ -1,5 +1,6 @@
 package com.chicken.pixeldash.ui.screens.menu
 
+import android.R.attr.text
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -41,13 +42,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material.icons.filled.ArrowBack
 import com.chicken.pixeldash.R
+import com.chicken.pixeldash.ui.components.EggCounter
 import com.chicken.pixeldash.ui.components.IconOvalButton
 import com.chicken.pixeldash.ui.components.PixelButton
 import com.chicken.pixeldash.ui.components.PixelSwitch
 import com.chicken.pixeldash.ui.components.GradientText
 import com.chicken.pixeldash.ui.components.PlayButton
 import com.chicken.pixeldash.ui.theme.retroFont
+
 @Composable
 fun MenuScreen(
     viewModel: MenuViewModel,
@@ -87,7 +95,29 @@ fun MenuScreen(
                 .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.weight(2f))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconOvalButton(
+                    modifier = Modifier.size(60.dp),
+                    onClick = {showSettings = true},
+                    cornerRadius = 22.dp,
+                    borderWidth = 3.dp,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = null,
+                            tint = Color.Black,
+                            modifier = Modifier.fillMaxSize(0.55f)
+                        )
+                    }
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
 
             GradientText(
                 text = "CHICKEN",
@@ -141,7 +171,7 @@ fun MenuScreen(
                 )
             }
 
-            Spacer(modifier = Modifier.weight(1.2f))
+            Spacer(modifier = Modifier.weight(1.5f))
 
             PixelButton(
                 text = "Shop",
@@ -151,25 +181,7 @@ fun MenuScreen(
                     .height(54.dp)
             )
 
-            Spacer(modifier = Modifier.height(14.dp))
-
-            PixelButton(
-                text = "Settings",
-                onClick = { showSettings = true },
-                modifier = Modifier
-                    .fillMaxWidth(0.5f)
-                    .height(54.dp),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = null,
-                        tint = Color(0xFF1C1C1C),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            )
-
-            Spacer(modifier = Modifier.weight(0.4f))
+            Spacer(modifier = Modifier.weight(0.8f))
         }
 
         if (showSettings) {
@@ -180,105 +192,6 @@ fun MenuScreen(
                 onToggleSounds = viewModel::toggleSound,
                 onClose = { showSettings = false }
             )
-        }
-    }
-}
-
-@Composable
-private fun MenuSettingsOverlay(
-    musicEnabled: Boolean,
-    soundsEnabled: Boolean,
-    onToggleMusic: () -> Unit,
-    onToggleSounds: () -> Unit,
-    onClose: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x88000000))
-    ) {
-        IconOvalButton(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp, end = 40.dp)
-                .size(64.dp),
-            cornerRadius = 40.dp,
-            borderWidth = 4.dp,
-            onClick = onClose,
-            icon = {
-                Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = null,
-                    tint = Color.Black,
-                    modifier = Modifier.size(34.dp)
-                )
-            }
-        )
-
-        Column(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .width(280.dp)
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            Color(0xFFF7EF7A),
-                            Color(0xFFBDB63D)
-                        )
-                    ),
-                    RoundedCornerShape(28.dp)
-                )
-                .border(6.dp, Color.Black, RoundedCornerShape(28.dp))
-                .padding(26.dp),
-            horizontalAlignment = Alignment.Start
-        ) {
-
-            GradientText(
-                text = "Settings",
-                size = 36.sp,
-                stroke = 10f,
-                expand = false
-            )
-
-            Spacer(Modifier.height(22.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                GradientText(
-                    text = "Music",
-                    size = 26.sp,
-                    stroke = 8f,
-                    expand = false
-                )
-
-                PixelSwitch(
-                    enabled = musicEnabled,
-                    onToggle = onToggleMusic
-                )
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                GradientText(
-                    text = "Sounds",
-                    size = 26.sp,
-                    stroke = 8f,
-                    expand = false
-                )
-
-                PixelSwitch(
-                    enabled = soundsEnabled,
-                    onToggle = onToggleSounds
-                )
-            }
         }
     }
 }

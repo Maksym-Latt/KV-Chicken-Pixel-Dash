@@ -29,13 +29,13 @@ fun PlayButton(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF9AF364),
-                        Color(0xFF4FAE22)
+                        Color(0xff93f36f),
+                        Color(0xFF49A11B)
                     )
                 )
             )
             .border(
-                width = 3.dp,
+                width = 2.dp,
                 color = Color.Black,
                 shape = RoundedCornerShape(50.dp)
             )
@@ -46,7 +46,7 @@ fun PlayButton(
             imageVector = Icons.Default.PlayArrow,
             contentDescription = null,
             tint = Color.Black,
-            modifier = Modifier.fillMaxSize(0.45f)
+            modifier = Modifier.fillMaxSize(0.65f)
         )
     }
 }

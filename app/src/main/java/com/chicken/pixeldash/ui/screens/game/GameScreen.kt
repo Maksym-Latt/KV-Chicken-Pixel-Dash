@@ -14,13 +14,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -57,7 +60,7 @@ import com.chicken.pixeldash.R
 import com.chicken.pixeldash.ui.components.EggCounter
 import com.chicken.pixeldash.ui.components.GradientText
 import com.chicken.pixeldash.ui.components.IconOvalButton
-import com.chicken.pixeldash.ui.components.ScorePill
+import com.chicken.pixeldash.ui.components.ScoreCounter
 import com.chicken.pixeldash.ui.screens.intro.IntroOverlay
 import com.chicken.pixeldash.ui.theme.retroFont
 
@@ -127,22 +130,17 @@ fun GameScreen(
                 viewModel.onViewportChanged(maxWidth.value, maxHeight.value)
             }
 
-            // BACKGROUND
             Image(
                 painter = painterResource(id = R.drawable.bg),
                 contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
-                alpha = 0.6f
             )
-
-            // ───────────────────────────────
-            // TOP BAR — кнопка паузы и Score
-            // ───────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp)
+                    .padding(horizontal = 20.dp)
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
                     .align(Alignment.TopCenter),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -163,40 +161,18 @@ fun GameScreen(
                 )
 
                 Column(horizontalAlignment = Alignment.End) {
-                    GradientText(
-                        text = "Score : ${state.score}",
-                        size = 18.sp,
-                        expand = false,
-                        stroke = 6f
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        GradientText(
-                            text = "${state.eggsCollected}",
-                            size = 16.sp,
-                            expand = false,
-                            stroke = 5f
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Image(
-                            painter = painterResource(id = R.drawable.item_egg),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    ScoreCounter(value = state.score)
+                    Spacer(modifier = Modifier.height(4.dp))
+                    EggCounter(value = state.eggsCollected)
                 }
             }
 
-            // ───────────────────────────────
-            // GAME SPRITES
-            // ───────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 12.dp)
             ) {
-
-                // obstacles
                 state.obstacles.forEach { o ->
                     Sprite(
                         painter = painterResource(
@@ -210,7 +186,6 @@ fun GameScreen(
                     )
                 }
 
-                // eggs
                 state.eggs.forEach { egg ->
                     Sprite(
                         painter = painterResource(R.drawable.item_egg),
@@ -221,7 +196,6 @@ fun GameScreen(
                     )
                 }
 
-                // player
                 Sprite(
                     painter = painterResource(id = state.skin.drawable),
                     spriteSize = playerSpriteSize(),
