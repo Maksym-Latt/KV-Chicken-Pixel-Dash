@@ -57,14 +57,15 @@ import com.chicken.pixeldash.R
 import com.chicken.pixeldash.ui.components.EggCounter
 import com.chicken.pixeldash.ui.components.GradientText
 import com.chicken.pixeldash.ui.components.IconOvalButton
-import com.chicken.pixeldash.ui.components.PixelButton
 import com.chicken.pixeldash.ui.components.ScorePill
+import com.chicken.pixeldash.ui.screens.intro.IntroOverlay
 import com.chicken.pixeldash.ui.theme.retroFont
 
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
-    onExit: () -> Unit
+    onExit: () -> Unit,
+    showIntroOnLaunch: Boolean = true
 ) {
     val state by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -90,7 +91,7 @@ fun GameScreen(
         }
     }
 
-    LaunchedEffect(Unit) { viewModel.restart() }
+    LaunchedEffect(showIntroOnLaunch) { viewModel.startNewGame(showIntroOnLaunch) }
 
     var startY by remember { mutableStateOf<Float?>(null) }
     var hasJumped by remember { mutableStateOf(false) }
@@ -229,6 +230,10 @@ fun GameScreen(
                     spriteY = state.playerY,
                     bouncing = state.status == GameStatus.Running
                 )
+            }
+
+            if (state.status == GameStatus.Ready) {
+                IntroOverlay(onStart = viewModel::startRun)
             }
 
             if (state.status == GameStatus.Paused) {

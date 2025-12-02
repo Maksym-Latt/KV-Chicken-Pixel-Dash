@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -38,93 +39,101 @@ import com.chicken.pixeldash.ui.components.PixelButton
 import com.chicken.pixeldash.ui.theme.retroFont
 
 @Composable
-fun IntroScreen(onStart: () -> Unit) {
+fun IntroOverlay(onStart: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF74C2E4))
+            .background(Color(0x88000000)),
+        contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.bg),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-            alpha = 0.7f
-        )
-
-        Column(
+        Surface(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = Color(0xFFFBF5E9),
+            tonalElevation = 6.dp
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
+            Box {
+                Image(
+                    painter = painterResource(id = R.drawable.bg),
+                    contentDescription = null,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = ContentScale.Crop,
+                    alpha = 0.2f
+                )
 
-            GradientText(
-                text = "Ready to dash?",
-                size = 38.sp,
-                stroke = 12f,
-                strokeColor = Color(0xFF1C1C1C)
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = Color(0xFFFDF8E8),
-                tonalElevation = 6.dp
-            ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    IntroRow(
-                        icon = Icons.Default.TouchApp,
-                        title = "Tap",
-                        description = "Tap anywhere to jump over rocks and boxes"
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    GradientText(
+                        text = "Ready to dash?",
+                        size = 34.sp,
+                        stroke = 10f,
+                        strokeColor = Color(0xFF1C1C1C)
                     )
 
-                    IntroRow(
-                        icon = Icons.Default.ArrowUpward,
-                        title = "Swipe up",
-                        description = "Swipe up for a stronger jump when you need extra height"
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color(0xFFFDF8E8), RoundedCornerShape(24.dp))
+                            .padding(horizontal = 18.dp, vertical = 20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        IntroRow(
+                            icon = Icons.Default.TouchApp,
+                            title = "Tap",
+                            description = "Tap anywhere to jump over rocks and boxes"
+                        )
+
+                        IntroRow(
+                            icon = Icons.Default.ArrowUpward,
+                            title = "Swipe up",
+                            description = "Swipe up for a stronger jump when you need extra height"
+                        )
+
+                        IntroRow(
+                            icon = Icons.Default.MusicNote,
+                            title = "Collect eggs",
+                            description = "Grab eggs for bonus points and coins to unlock new skins"
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Image(
+                        painter = painterResource(id = R.drawable.chicken_2),
+                        contentDescription = null,
+                        modifier = Modifier.size(120.dp),
+                        contentScale = ContentScale.Fit
                     )
 
-                    IntroRow(
-                        icon = Icons.Default.MusicNote,
-                        title = "Collect eggs",
-                        description = "Grab eggs for bonus points and coins to unlock new skins"
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    PixelButton(
+                        text = "Start",
+                        onClick = onStart,
+                        modifier = Modifier
+                            .fillMaxWidth(0.6f)
+                            .height(58.dp),
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Default.PlayArrow,
+                                contentDescription = null,
+                                tint = Color(0xFF1C1C1C),
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(26.dp))
-
-            Image(
-                painter = painterResource(id = R.drawable.chicken_2),
-                contentDescription = null,
-                modifier = Modifier.size(120.dp),
-                contentScale = ContentScale.Fit
-            )
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            PixelButton(
-                text = "Start",
-                onClick = onStart,
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(58.dp),
-                icon = {
-                    Icon(
-                        imageVector = Icons.Default.PlayArrow,
-                        contentDescription = null,
-                        tint = Color(0xFF1C1C1C),
-                        modifier = Modifier.size(26.dp)
-                    )
-                }
-            )
         }
     }
 }

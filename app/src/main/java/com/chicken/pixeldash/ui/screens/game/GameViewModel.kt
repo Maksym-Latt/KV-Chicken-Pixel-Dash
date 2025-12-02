@@ -97,11 +97,7 @@ class GameViewModel @Inject constructor(
     private var eggSpawnTimer = 0.7f
 
     init {
-        viewModelScope.launch {
-            applyAudioVolumes()
-            audioController.playGameMusic()
-            resetGame()
-        }
+        viewModelScope.launch { applyAudioVolumes() }
     }
 
     fun onViewportChanged(width: Float, height: Float) {
@@ -157,11 +153,28 @@ class GameViewModel @Inject constructor(
         }
     }
 
-    fun restart() {
+    fun startNewGame(showIntro: Boolean) {
         viewModelScope.launch {
-            audioController.playGameMusic()
-            resetGame()
+            applyAudioVolumes()
+            if (showIntro) {
+                audioController.pauseMusic()
+            } else {
+                audioController.playGameMusic()
+            }
+            resetGame(if (showIntro) GameStatus.Ready else GameStatus.Running)
         }
+    }
+
+    fun startRun() {
+        val state = _uiState.value
+        if (state.status == GameStatus.Ready) {
+            _uiState.value = state.copy(status = GameStatus.Running)
+            audioController.playGameMusic()
+        }
+    }
+
+    fun restart() {
+        startNewGame(showIntro = false)
     }
 
     fun onExit() {
@@ -169,7 +182,7 @@ class GameViewModel @Inject constructor(
         audioController.stopMusic()
     }
 
-    private fun resetGame() {
+    private fun resetGame(startStatus: GameStatus) {
         gameJob?.cancel()
         velocityY = 0f
         elapsedTime = 0f
@@ -177,7 +190,7 @@ class GameViewModel @Inject constructor(
         spawnTimer = 0.2f
         eggSpawnTimer = 0.6f
         _uiState.value = GameUiState(
-            status = GameStatus.Running,
+            status = startStatus,
             groundHeight = _uiState.value.groundHeight
         )
         gameJob = viewModelScope.launch { gameLoop() }
