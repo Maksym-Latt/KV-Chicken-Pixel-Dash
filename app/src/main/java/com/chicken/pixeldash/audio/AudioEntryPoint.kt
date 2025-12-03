@@ -13,12 +13,3 @@ import dagger.hilt.components.SingletonComponent
 interface AudioControllerEntryPoint {
     fun audioController(): AudioController
 }
-
-@Composable
-fun rememberAudioController(): AudioController {
-    val appContext = LocalContext.current.applicationContext
-    return remember(appContext) {
-        EntryPointAccessors.fromApplication(appContext, AudioControllerEntryPoint::class.java)
-            .audioController()
-    }
-}

@@ -96,6 +96,9 @@ class GameViewModel @Inject constructor(
     private var spawnTimer = 0f
     private var eggSpawnTimer = 0.5f
 
+    private var hitPlayed = false
+    private var gameOverTriggered = false
+
     init {
         viewModelScope.launch { applyAudioVolumes() }
     }
@@ -193,6 +196,10 @@ class GameViewModel @Inject constructor(
             status = startStatus,
             groundHeight = _uiState.value.groundHeight
         )
+
+        hitPlayed = false
+        gameOverTriggered = false
+
         gameJob = viewModelScope.launch { gameLoop() }
     }
 
@@ -241,8 +248,16 @@ class GameViewModel @Inject constructor(
 
         val (survivingEggs, collectedEggs) = movedEggs.partition { !intersects(playerRect, it.hitboxRect()) }
 
+        if (collectedEggs.isNotEmpty()) {
+            audioController.playCollectEgg()
+        }
+
         val collision = movedObstacles.any { intersects(playerRect, it.hitboxRect()) }
 
+        if (collision && !hitPlayed) {
+            hitPlayed = true
+            audioController.playChickenHit()
+        }
         val newScore = (elapsedTime * TIME_SCORE_RATE).toInt() + (state.eggsCollected + collectedEggs.size) * EGG_SCORE_VALUE
 
         state = state.copy(
@@ -258,8 +273,12 @@ class GameViewModel @Inject constructor(
         _uiState.value = state
         velocityY = newVelocity
 
-        if (collision) {
-            handleGameOver()
+        if (collision && !gameOverTriggered) {
+            gameOverTriggered = true
+            viewModelScope.launch {
+                delay(120)
+                handleGameOver()
+            }
             return
         }
 
@@ -336,7 +355,7 @@ class GameViewModel @Inject constructor(
         val finalState = _uiState.value
         _uiState.value = finalState.copy(status = GameStatus.Over)
         viewModelScope.launch {
-            audioController.playChickenHit()
+            audioController.playGameWin()
             audioController.pauseMusic()
             playerRepository.updateBestScore(finalState.score)
             if (finalState.eggsCollected > 0) {
