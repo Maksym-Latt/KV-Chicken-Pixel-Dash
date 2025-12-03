@@ -150,7 +150,7 @@ fun GameScreen(
                 viewModel.updateGroundHeight(groundHeight.value)
             }
 
-            LaunchedEffect(state.status, state.speed, maxWidth) {
+            LaunchedEffect(state.status, maxWidth) {
                 lastFrameNanos = 0L
                 if (state.status != GameStatus.Running) return@LaunchedEffect
 
@@ -164,10 +164,13 @@ fun GameScreen(
                         val dt = (frameTimeNanos - lastFrameNanos) / 1_000_000_000f
                         lastFrameNanos = frameTimeNanos
                         val width = maxWidth.value
+                        val currentSpeed = viewModel.uiState.value.speed
 
-                        farOffset = wrapOffset(farOffset - state.speed * 0.12f * dt, width)
-                        midOffset = wrapOffset(midOffset - state.speed * 0.25f * dt, width)
-                        groundOffset = wrapOffset(groundOffset - state.speed * dt, width)
+                        viewModel.onFrame(dt)
+
+                        farOffset = wrapOffset(farOffset - currentSpeed * 0.12f * dt, width)
+                        midOffset = wrapOffset(midOffset - currentSpeed * 0.25f * dt, width)
+                        groundOffset = wrapOffset(groundOffset - currentSpeed * dt, width)
                     }
                 }
             }
