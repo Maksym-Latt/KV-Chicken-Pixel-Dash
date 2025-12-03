@@ -94,7 +94,7 @@ class GameViewModel @Inject constructor(
     private var elapsedTime = 0f
     private var animationTimer = 0f
     private var spawnTimer = 0f
-    private var eggSpawnTimer = 0.7f
+    private var eggSpawnTimer = 0.5f
 
     init {
         viewModelScope.launch { applyAudioVolumes() }
@@ -188,7 +188,7 @@ class GameViewModel @Inject constructor(
         elapsedTime = 0f
         animationTimer = 0f
         spawnTimer = 0.2f
-        eggSpawnTimer = 0.6f
+        eggSpawnTimer = 0.45f
         _uiState.value = GameUiState(
             status = startStatus,
             groundHeight = _uiState.value.groundHeight
@@ -269,7 +269,7 @@ class GameViewModel @Inject constructor(
         }
 
         if (eggSpawnTimer <= 0f) {
-            eggSpawnTimer = Random.nextFloat() * 1.3f + 0.8f
+            eggSpawnTimer = Random.nextFloat() * 1.0f + 0.6f
             spawnEgg()
         }
     }
@@ -297,7 +297,18 @@ class GameViewModel @Inject constructor(
         val temp = Entity(id = 0, type = EntityType.Egg, x = 0f, y = 0f)
         val (width, height) = temp.spriteSize()
 
-        val spawnX = viewportWidth + width + 24f
+        val baseSpawnX = viewportWidth + width + 24f
+
+        val closestObstacleFront = _uiState.value.obstacles
+            .maxOfOrNull { it.x + it.spriteWidth() }
+            ?: 0f
+
+        val closestEggFront = _uiState.value.eggs
+            .maxOfOrNull { it.x + it.spriteWidth() }
+            ?: 0f
+
+        val minSpacing = 96f
+        val spawnX = listOf(baseSpawnX, closestObstacleFront + minSpacing, closestEggFront + minSpacing).max()
 
         val isGroundEgg = Random.nextFloat() < 0.7f
 

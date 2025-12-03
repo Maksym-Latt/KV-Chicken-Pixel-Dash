@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -98,6 +99,9 @@ fun GameScreen(
 
     var startY by remember { mutableStateOf<Float?>(null) }
     var hasJumped by remember { mutableStateOf(false) }
+    var farOffset by remember { mutableStateOf(0f) }
+    var midOffset by remember { mutableStateOf(0f) }
+    var lastFrameNanos by remember { mutableStateOf(0L) }
 
     Surface(color = Color(0xFF74C2E4)) {
         BoxWithConstraints(
@@ -130,12 +134,40 @@ fun GameScreen(
                 viewModel.onViewportChanged(maxWidth.value, maxHeight.value)
             }
 
-            Image(
-                painter = painterResource(id = R.drawable.bg),
-                contentDescription = null,
-                modifier = Modifier.fillMaxSize(),
-                contentScale = ContentScale.Crop,
-            )
+            LaunchedEffect(state.status, state.speed, maxWidth) {
+                lastFrameNanos = 0L
+                if (state.status != GameStatus.Running) return@LaunchedEffect
+
+                while (true) {
+                    withFrameNanos { frameTimeNanos ->
+                        if (lastFrameNanos == 0L) {
+                            lastFrameNanos = frameTimeNanos
+                            return@withFrameNanos
+                        }
+
+                        val dt = (frameTimeNanos - lastFrameNanos) / 1_000_000_000f
+                        lastFrameNanos = frameTimeNanos
+                        val width = maxWidth.value
+
+                        farOffset = wrapOffset(farOffset - state.speed * 0.12f * dt, width)
+                        midOffset = wrapOffset(midOffset - state.speed * 0.25f * dt, width)
+                    }
+                }
+            }
+
+            Box(modifier = Modifier.fillMaxSize()) {
+                ParallaxLayer(
+                    painter = painterResource(id = R.drawable.bg),
+                    offset = farOffset,
+                    maxWidth = maxWidth,
+                    alpha = 0.85f
+                )
+                ParallaxLayer(
+                    painter = painterResource(id = R.drawable.bg),
+                    offset = midOffset,
+                    maxWidth = maxWidth
+                )
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -244,6 +276,35 @@ fun GameScreen(
 
 
 @Composable
+private fun BoxScope.ParallaxLayer(
+    painter: Painter,
+    offset: Float,
+    maxWidth: Dp,
+    alpha: Float = 1f
+) {
+    Image(
+        painter = painter,
+        contentDescription = null,
+        modifier = Modifier
+            .fillMaxSize()
+            .offset(x = offset.dp)
+            .graphicsLayer { this.alpha = alpha },
+        contentScale = ContentScale.Crop,
+    )
+
+    Image(
+        painter = painter,
+        contentDescription = null,
+        modifier = Modifier
+            .fillMaxSize()
+            .offset(x = (offset + maxWidth.value).dp)
+            .graphicsLayer { this.alpha = alpha },
+        contentScale = ContentScale.Crop,
+    )
+}
+
+
+@Composable
 private fun BoxScope.Sprite(
     painter: Painter,
     spriteSize: Pair<Float, Float>,
@@ -282,6 +343,15 @@ private fun BoxScope.Sprite(
                 .border(1.dp, Color.Red, RoundedCornerShape(2.dp))
         )
     }
+}
+
+
+private fun wrapOffset(value: Float, width: Float): Float {
+    var offset = value
+    val limit = if (width == 0f) 1f else width
+    while (offset <= -limit) offset += limit
+    while (offset >= limit) offset -= limit
+    return offset
 }
 
 @Composable
