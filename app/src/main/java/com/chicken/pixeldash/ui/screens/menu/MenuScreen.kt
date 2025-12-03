@@ -164,7 +164,7 @@ fun MenuScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Image(
-                    painter = painterResource(id = R.drawable.chicken_1),
+                    painter = painterResource(id = state.selectedSkinDrawable),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit

@@ -19,7 +19,8 @@ data class MenuUiState(
     val coins: Int = 0,
     val musicEnabled: Boolean = true,
     val soundEnabled: Boolean = true,
-    val selectedSkinName: String = SkinCatalog.allSkins.first().name
+    val selectedSkinName: String = SkinCatalog.allSkins.first().name,
+    val selectedSkinDrawable: Int = SkinCatalog.allSkins.first().drawable
 )
 
 @HiltViewModel
@@ -42,7 +43,8 @@ class MenuViewModel @Inject constructor(
             coins = coins,
             musicEnabled = music,
             soundEnabled = sound,
-            selectedSkinName = skin.name
+            selectedSkinName = skin.name,
+            selectedSkinDrawable = skin.drawable
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, MenuUiState())
 
