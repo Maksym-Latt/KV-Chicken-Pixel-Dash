@@ -75,6 +75,8 @@ import kotlin.random.Random
 private const val GROUND_IMAGE_WIDTH = 1536f
 private const val GROUND_IMAGE_HEIGHT = 403f
 private const val GROUND_HEIGHT_RATIO = GROUND_IMAGE_HEIGHT / GROUND_IMAGE_WIDTH
+private const val FRAME_STEP = 1f / 120f
+private const val MAX_ACCUMULATED_TIME = 0.25f
 
 @Composable
 fun GameScreen(
@@ -110,11 +112,11 @@ fun GameScreen(
 
     var startY by remember { mutableStateOf<Float?>(null) }
     var hasJumped by remember { mutableStateOf(false) }
-    val skyPainter = remember { painterResource(id = R.drawable.bg_sky) }
-    val groundPainter = remember { painterResource(id = R.drawable.bg_ground) }
-    val rockPainter = remember { painterResource(id = R.drawable.item_rock) }
-    val boxPainter = remember { painterResource(id = R.drawable.item_box) }
-    val eggPainter = remember { painterResource(id = R.drawable.item_egg) }
+    val skyPainter = painterResource(id = R.drawable.bg_sky)
+    val groundPainter = painterResource(id = R.drawable.bg_ground)
+    val rockPainter = painterResource(id = R.drawable.item_rock)
+    val boxPainter = painterResource(id = R.drawable.item_box)
+    val eggPainter = painterResource(id = R.drawable.item_egg)
 
     Surface(color = Color(0xFF74C2E4)) {
         BoxWithConstraints(
@@ -221,7 +223,7 @@ fun GameScreen(
                     )
                 }
 
-                val playerPainter = remember(state.skin.drawable) { painterResource(id = state.skin.drawable) }
+                val playerPainter = painterResource(id = state.skin.drawable)
                 Sprite(
                     painter = playerPainter,
                     spriteSize = playerSpriteSize(),
@@ -285,9 +287,11 @@ private fun BoxWithConstraintsScope.GameBackground(
     var groundOffset by remember { mutableFloatStateOf(0f) }
     var lastFrameNanos by remember { mutableStateOf(0L) }
     val latestSpeed = rememberUpdatedState(speed)
+    var accumulator by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(status, maxWidth) {
         lastFrameNanos = 0L
+        accumulator = 0f
         if (status != GameStatus.Running) return@LaunchedEffect
 
         while (isActive) {
@@ -302,11 +306,15 @@ private fun BoxWithConstraintsScope.GameBackground(
                 val width = maxWidth.value
                 val currentSpeed = latestSpeed.value
 
-                onFrame(dt)
+                accumulator = (accumulator + dt).coerceAtMost(MAX_ACCUMULATED_TIME)
+                while (accumulator >= FRAME_STEP) {
+                    accumulator -= FRAME_STEP
+                    onFrame(FRAME_STEP)
 
-                farOffset = wrapOffset(farOffset - currentSpeed * 0.12f * dt, width)
-                midOffset = wrapOffset(midOffset - currentSpeed * 0.25f * dt, width)
-                groundOffset = wrapOffset(groundOffset - currentSpeed * dt, width)
+                    farOffset = wrapOffset(farOffset - currentSpeed * 0.12f * FRAME_STEP, width)
+                    midOffset = wrapOffset(midOffset - currentSpeed * 0.25f * FRAME_STEP, width)
+                    groundOffset = wrapOffset(groundOffset - currentSpeed * FRAME_STEP, width)
+                }
             }
         }
     }
@@ -461,26 +469,12 @@ fun BoxScope.PixelSparklesLayer(
     }
 
     LaunchedEffect(Unit) {
-        var last = 0L
-
         while (true) {
-            withFrameNanos { t ->
-                if (last == 0L) {
-                    last = t
-                    return@withFrameNanos
-                }
-
-                val dt = (t - last) / 1_000_000_000f
-                last = t
-
+            withFrameNanos {
                 particles.forEach { p ->
-                    // рух sparkles
-                    p.x += (p.speed * dt)
+                    p.x += (p.speed * FRAME_STEP)
+                    p.life -= FRAME_STEP
 
-                    // "мерехтіння" через life
-                    p.life -= dt
-
-                    // якщо spark зник — створюємо новий
                     if (p.life <= 0f) {
                         p.x = 0f
                         p.y = Random.nextFloat()
