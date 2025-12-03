@@ -7,19 +7,19 @@ import com.chicken.pixeldash.data.player.PlayerRepository
 import com.chicken.pixeldash.data.settings.SettingsRepository
 import com.chicken.pixeldash.domain.model.Skin
 import com.chicken.pixeldash.domain.model.SkinCatalog
+import androidx.compose.runtime.withFrameNanos
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.random.Random
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable.isActive
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 const val PLAYER_X = 32f
@@ -91,6 +91,7 @@ class GameViewModel @Inject constructor(
     private var viewportWidth = 360f
     private var viewportHeight = 640f
     private var velocityY = 0f
+    private var gameLastFrameNanos = 0L
     private var elapsedTime = 0f
     private var animationTimer = 0f
     private var spawnTimer = 0f
@@ -194,6 +195,7 @@ class GameViewModel @Inject constructor(
     private fun resetGame(startStatus: GameStatus) {
         gameJob?.cancel()
         velocityY = 0f
+        gameLastFrameNanos = 0L
         elapsedTime = 0f
         animationTimer = 0f
         spawnTimer = 0.2f
@@ -210,16 +212,23 @@ class GameViewModel @Inject constructor(
     }
 
     private suspend fun gameLoop() {
-        var last = System.currentTimeMillis()
         while (isActive) {
-            val now = System.currentTimeMillis()
-            val dt = (now - last).coerceAtMost(32).toFloat() / 1000f
-            last = now
-            val state = _uiState.value
-            if (state.status == GameStatus.Running) {
-                tick(dt)
+            withFrameNanos { frameTimeNanos ->
+                var lastFrameNanos = gameLastFrameNanos
+                if (lastFrameNanos == 0L) {
+                    gameLastFrameNanos = frameTimeNanos
+                    return@withFrameNanos
+                }
+
+                val dt = ((frameTimeNanos - lastFrameNanos) / 1_000_000_000f)
+                    .coerceAtMost(0.032f)
+                gameLastFrameNanos = frameTimeNanos
+
+                val state = _uiState.value
+                if (state.status == GameStatus.Running) {
+                    tick(dt)
+                }
             }
-            delay(16)
         }
     }
 
