@@ -1,6 +1,7 @@
 package com.chicken.pixeldash.ui.screens.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -43,11 +44,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -64,6 +70,7 @@ import com.chicken.pixeldash.ui.components.IconOvalButton
 import com.chicken.pixeldash.ui.components.ScoreCounter
 import com.chicken.pixeldash.ui.screens.intro.IntroOverlay
 import com.chicken.pixeldash.ui.theme.retroFont
+import kotlin.random.Random
 
 @Composable
 fun GameScreen(
@@ -172,8 +179,14 @@ fun GameScreen(
                         offset = midOffset,
                         maxWidth = maxW
                     )
+                    PixelSparklesLayer(
+                        count = 14,
+                        groundTop = groundTop
+                    )
                 }
             }
+
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -351,6 +364,92 @@ private fun BoxScope.Sprite(
     }
 }
 
+@Composable
+fun BoxScope.PixelSparklesLayer(
+    count: Int = 12,
+    minSize: Float = 4f,
+    maxSize: Float = 10f,
+    groundTop: Dp
+) {
+    val density = LocalDensity.current
+    val groundTopPx = with(density) { groundTop.toPx() }
+
+    val particles = remember {
+        List(count) {
+            SparkleParticle(
+                x = Random.nextFloat(),
+                y = Random.nextFloat(),
+                size = lerp(minSize, maxSize, Random.nextFloat()),
+                alpha = Random.nextFloat() * 0.9f + 0.1f,
+                speed = Random.nextFloat() * 10f + 5f,
+                life = Random.nextFloat() * 1f + 0.5f
+            )
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        var last = 0L
+
+        while (true) {
+            withFrameNanos { t ->
+                if (last == 0L) {
+                    last = t
+                    return@withFrameNanos
+                }
+
+                val dt = (t - last) / 1_000_000_000f
+                last = t
+
+                particles.forEach { p ->
+                    // рух sparkles
+                    p.x += (p.speed * dt)
+
+                    // "мерехтіння" через life
+                    p.life -= dt
+
+                    // якщо spark зник — створюємо новий
+                    if (p.life <= 0f) {
+                        p.x = 0f
+                        p.y = Random.nextFloat()
+                        p.life = Random.nextFloat() * 1.2f + 0.4f
+                        p.size = lerp(minSize, maxSize, Random.nextFloat())
+                        p.alpha = Random.nextFloat() * 0.7f + 0.3f
+                    }
+                }
+            }
+        }
+    }
+
+    Canvas(
+        modifier = Modifier
+            .matchParentSize()
+            .graphicsLayer { alpha = 0.85f }
+    ) {
+        val w = size.width
+
+        particles.forEach { p ->
+            val px = (p.x % 1f) * w
+            val py = p.y * (groundTopPx - 40f)
+
+            drawCircle(
+                color = Color.White.copy(alpha = p.alpha),
+                radius = p.size,
+                center = Offset(px, py)
+            )
+        }
+    }
+}
+
+private class SparkleParticle(
+    var x: Float,
+    var y: Float,
+    var size: Float,
+    var alpha: Float,
+    var speed: Float,
+    var life: Float
+)
+
+private fun lerp(a: Float, b: Float, t: Float) = a + (b - a) * t
 
 private fun wrapOffset(value: Float, width: Float): Float {
     var offset = value
