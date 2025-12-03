@@ -72,6 +72,10 @@ import com.chicken.pixeldash.ui.screens.intro.IntroOverlay
 import com.chicken.pixeldash.ui.theme.retroFont
 import kotlin.random.Random
 
+private const val GROUND_IMAGE_WIDTH = 1536f
+private const val GROUND_IMAGE_HEIGHT = 403f
+private const val GROUND_HEIGHT_RATIO = GROUND_IMAGE_HEIGHT / GROUND_IMAGE_WIDTH
+
 @Composable
 fun GameScreen(
     viewModel: GameViewModel,
@@ -108,6 +112,7 @@ fun GameScreen(
     var hasJumped by remember { mutableStateOf(false) }
     var farOffset by remember { mutableStateOf(0f) }
     var midOffset by remember { mutableStateOf(0f) }
+    var groundOffset by remember { mutableStateOf(0f) }
     var lastFrameNanos by remember { mutableStateOf(0L) }
 
     Surface(color = Color(0xFF74C2E4)) {
@@ -134,11 +139,15 @@ fun GameScreen(
                     detectTapGestures { viewModel.jump(false) }
                 }
         ) {
-            val groundHeight = state.groundHeight.dp
+            val groundHeight = maxWidth * GROUND_HEIGHT_RATIO
             val groundTop = maxHeight - groundHeight
 
             LaunchedEffect(maxWidth, maxHeight) {
                 viewModel.onViewportChanged(maxWidth.value, maxHeight.value)
+            }
+
+            LaunchedEffect(groundHeight) {
+                viewModel.updateGroundHeight(groundHeight.value)
             }
 
             LaunchedEffect(state.status, state.speed, maxWidth) {
@@ -158,6 +167,7 @@ fun GameScreen(
 
                         farOffset = wrapOffset(farOffset - state.speed * 0.12f * dt, width)
                         midOffset = wrapOffset(midOffset - state.speed * 0.25f * dt, width)
+                        groundOffset = wrapOffset(groundOffset - state.speed * dt, width)
                     }
                 }
             }
@@ -166,18 +176,26 @@ fun GameScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 val maxW = maxWidth
+                val skyPainter = painterResource(id = R.drawable.bg_sky)
+                val groundPainter = painterResource(id = R.drawable.bg_ground)
 
                 Box(modifier = Modifier.fillMaxSize()) {
                     ParallaxLayer(
-                        painter = painterResource(id = R.drawable.bg),
+                        painter = skyPainter,
                         offset = farOffset,
                         maxWidth = maxW,
                         alpha = 0.85f
                     )
                     ParallaxLayer(
-                        painter = painterResource(id = R.drawable.bg),
+                        painter = skyPainter,
                         offset = midOffset,
                         maxWidth = maxW
+                    )
+                    GroundLayer(
+                        painter = groundPainter,
+                        offset = groundOffset,
+                        maxWidth = maxW,
+                        height = groundHeight
                     )
                     PixelSparklesLayer(
                         count = 14,
@@ -319,6 +337,36 @@ private fun BoxScope.ParallaxLayer(
             .offset(x = (offset + maxWidth.value).dp)
             .graphicsLayer { this.alpha = alpha },
         contentScale = ContentScale.Crop,
+    )
+}
+
+@Composable
+private fun BoxScope.GroundLayer(
+    painter: Painter,
+    offset: Float,
+    maxWidth: Dp,
+    height: Dp
+) {
+    Image(
+        painter = painter,
+        contentDescription = null,
+        modifier = Modifier
+            .width(maxWidth)
+            .height(height)
+            .align(Alignment.BottomStart)
+            .offset(x = offset.dp),
+        contentScale = ContentScale.FillBounds
+    )
+
+    Image(
+        painter = painter,
+        contentDescription = null,
+        modifier = Modifier
+            .width(maxWidth)
+            .height(height)
+            .align(Alignment.BottomStart)
+            .offset(x = (offset + maxWidth.value).dp),
+        contentScale = ContentScale.FillBounds
     )
 }
 

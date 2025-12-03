@@ -108,6 +108,12 @@ class GameViewModel @Inject constructor(
         viewportHeight = height
     }
 
+    fun updateGroundHeight(height: Float) {
+        if (height != _uiState.value.groundHeight) {
+            _uiState.value = _uiState.value.copy(groundHeight = height)
+        }
+    }
+
     fun jump(high: Boolean) {
         val state = _uiState.value
         if (state.status != GameStatus.Running) return
