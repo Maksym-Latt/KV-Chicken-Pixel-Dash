@@ -42,13 +42,15 @@ class DefaultAudioController @Inject constructor(
     }
 
     private fun updateSoundVolume() {
-        sfxPlayer?.setVolume(soundVolume, soundVolume)
+        sfxPlayers.forEach { (player, cue) ->
+            val adjusted = cue.normalizedSoundVolume()
+            player.setVolume(adjusted, adjusted)
+        }
     }
 
     private var currentMusic: MusicTrack? = null
-    private var currentSound: SoundCue? = null
     private var musicPlayer: MediaPlayer? = null
-    private var sfxPlayer: MediaPlayer? = null
+    private val sfxPlayers = mutableSetOf<SfxInstance>()
 
     // ---------------------- PUBLIC API ----------------------
 
@@ -90,10 +92,7 @@ class DefaultAudioController @Inject constructor(
 
     override fun setSoundVolume(percent: Int) {
         soundVolume = percent.toVolume()
-        currentSound?.let { cue ->
-            val adjusted = cue.normalizedSoundVolume()
-            sfxPlayer?.setVolume(adjusted, adjusted)
-        }
+        updateSoundVolume()
     }
 
     override fun playGameWin() {
@@ -137,24 +136,17 @@ class DefaultAudioController @Inject constructor(
     }
 
     private fun playSound(effect: SoundCue) {
-        sfxPlayer?.run {
-            stop()
-            release()
-        }
-        sfxPlayer = MediaPlayer.create(context, effect.resId).apply {
+        val player = MediaPlayer.create(context, effect.resId).apply {
             isLooping = false
             val adjusted = effect.normalizedSoundVolume()
             setVolume(adjusted, adjusted)
             setOnCompletionListener {
                 it.release()
-                if (sfxPlayer === it) {
-                    sfxPlayer = null
-                    currentSound = null
-                }
+                sfxPlayers.removeIf { instance -> instance.player === it }
             }
             start()
         }
-        currentSound = effect
+        sfxPlayers.add(SfxInstance(player, effect))
     }
 
     private fun Int.toVolume(): Float = (this.coerceIn(0, 100) / 100f).coerceIn(0f, 1f)
@@ -197,5 +189,7 @@ class DefaultAudioController @Inject constructor(
             SoundCue.CollectEgg to 0.9f,
             SoundCue.ChickenJump to 0.9f,
         )
+
+        private data class SfxInstance(val player: MediaPlayer, val cue: SoundCue)
     }
 }
