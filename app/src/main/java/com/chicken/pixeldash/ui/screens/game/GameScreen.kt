@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -38,17 +38,16 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.input.pointer.pointerInput
@@ -70,6 +69,7 @@ import com.chicken.pixeldash.ui.components.IconOvalButton
 import com.chicken.pixeldash.ui.components.ScoreCounter
 import com.chicken.pixeldash.ui.screens.intro.IntroOverlay
 import com.chicken.pixeldash.ui.theme.retroFont
+import kotlinx.coroutines.isActive
 import kotlin.random.Random
 
 private const val GROUND_IMAGE_WIDTH = 1536f
@@ -110,10 +110,11 @@ fun GameScreen(
 
     var startY by remember { mutableStateOf<Float?>(null) }
     var hasJumped by remember { mutableStateOf(false) }
-    var farOffset by remember { mutableStateOf(0f) }
-    var midOffset by remember { mutableStateOf(0f) }
-    var groundOffset by remember { mutableStateOf(0f) }
-    var lastFrameNanos by remember { mutableStateOf(0L) }
+    val skyPainter = remember { painterResource(id = R.drawable.bg_sky) }
+    val groundPainter = remember { painterResource(id = R.drawable.bg_ground) }
+    val rockPainter = remember { painterResource(id = R.drawable.item_rock) }
+    val boxPainter = remember { painterResource(id = R.drawable.item_box) }
+    val eggPainter = remember { painterResource(id = R.drawable.item_egg) }
 
     Surface(color = Color(0xFF74C2E4)) {
         BoxWithConstraints(
@@ -150,62 +151,16 @@ fun GameScreen(
                 viewModel.updateGroundHeight(groundHeight.value)
             }
 
-            LaunchedEffect(state.status, maxWidth) {
-                lastFrameNanos = 0L
-                if (state.status != GameStatus.Running) return@LaunchedEffect
-
-                while (true) {
-                    withFrameNanos { frameTimeNanos ->
-                        if (lastFrameNanos == 0L) {
-                            lastFrameNanos = frameTimeNanos
-                            return@withFrameNanos
-                        }
-
-                        val dt = (frameTimeNanos - lastFrameNanos) / 1_000_000_000f
-                        lastFrameNanos = frameTimeNanos
-                        val width = maxWidth.value
-                        val currentSpeed = viewModel.uiState.value.speed
-
-                        viewModel.onFrame(dt)
-
-                        farOffset = wrapOffset(farOffset - currentSpeed * 0.12f * dt, width)
-                        midOffset = wrapOffset(midOffset - currentSpeed * 0.25f * dt, width)
-                        groundOffset = wrapOffset(groundOffset - currentSpeed * dt, width)
-                    }
-                }
-            }
-
-            BoxWithConstraints(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                val maxW = maxWidth
-                val skyPainter = painterResource(id = R.drawable.bg_sky)
-                val groundPainter = painterResource(id = R.drawable.bg_ground)
-
-                Box(modifier = Modifier.fillMaxSize()) {
-                    ParallaxLayer(
-                        painter = skyPainter,
-                        offset = farOffset,
-                        maxWidth = maxW,
-                        alpha = 0.85f
-                    )
-                    ParallaxLayer(
-                        painter = skyPainter,
-                        offset = midOffset,
-                        maxWidth = maxW
-                    )
-                    GroundLayer(
-                        painter = groundPainter,
-                        offset = groundOffset,
-                        maxWidth = maxW,
-                        height = groundHeight
-                    )
-                    PixelSparklesLayer(
-                        count = 14,
-                        groundTop = groundTop
-                    )
-                }
-            }
+            GameBackground(
+                status = state.status,
+                maxWidth = maxWidth,
+                groundHeight = groundHeight,
+                groundTop = groundTop,
+                skyPainter = skyPainter,
+                groundPainter = groundPainter,
+                speed = state.speed,
+                onFrame = viewModel::onFrame
+            )
 
 
             Row(
@@ -246,11 +201,9 @@ fun GameScreen(
                     .padding(horizontal = 12.dp)
             ) {
                 state.obstacles.forEach { o ->
+                    val obstaclePainter = if (o.type == EntityType.Box) boxPainter else rockPainter
                     Sprite(
-                        painter = painterResource(
-                            if (o.type == EntityType.Box) R.drawable.item_box
-                            else R.drawable.item_rock
-                        ),
+                        painter = obstaclePainter,
                         spriteSize = o.spriteSize(),
                         x = o.x,
                         groundTop = groundTop,
@@ -260,7 +213,7 @@ fun GameScreen(
 
                 state.eggs.forEach { egg ->
                     Sprite(
-                        painter = painterResource(R.drawable.item_egg),
+                        painter = eggPainter,
                         spriteSize = egg.spriteSize(),
                         x = egg.x,
                         groundTop = groundTop,
@@ -268,8 +221,9 @@ fun GameScreen(
                     )
                 }
 
+                val playerPainter = remember(state.skin.drawable) { painterResource(id = state.skin.drawable) }
                 Sprite(
-                    painter = painterResource(id = state.skin.drawable),
+                    painter = playerPainter,
                     spriteSize = playerSpriteSize(),
                     x = PLAYER_X,
                     groundTop = groundTop,
@@ -311,6 +265,74 @@ fun GameScreen(
                 )
             }
         }
+    }
+}
+
+
+@Composable
+private fun BoxWithConstraintsScope.GameBackground(
+    status: GameStatus,
+    maxWidth: Dp,
+    groundHeight: Dp,
+    groundTop: Dp,
+    skyPainter: Painter,
+    groundPainter: Painter,
+    speed: Float,
+    onFrame: (Float) -> Unit
+) {
+    var farOffset by remember { mutableFloatStateOf(0f) }
+    var midOffset by remember { mutableFloatStateOf(0f) }
+    var groundOffset by remember { mutableFloatStateOf(0f) }
+    var lastFrameNanos by remember { mutableStateOf(0L) }
+    val latestSpeed = rememberUpdatedState(speed)
+
+    LaunchedEffect(status, maxWidth) {
+        lastFrameNanos = 0L
+        if (status != GameStatus.Running) return@LaunchedEffect
+
+        while (isActive) {
+            withFrameNanos { frameTimeNanos ->
+                if (lastFrameNanos == 0L) {
+                    lastFrameNanos = frameTimeNanos
+                    return@withFrameNanos
+                }
+
+                val dt = (frameTimeNanos - lastFrameNanos) / 1_000_000_000f
+                lastFrameNanos = frameTimeNanos
+                val width = maxWidth.value
+                val currentSpeed = latestSpeed.value
+
+                onFrame(dt)
+
+                farOffset = wrapOffset(farOffset - currentSpeed * 0.12f * dt, width)
+                midOffset = wrapOffset(midOffset - currentSpeed * 0.25f * dt, width)
+                groundOffset = wrapOffset(groundOffset - currentSpeed * dt, width)
+            }
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        ParallaxLayer(
+            painter = skyPainter,
+            offset = farOffset,
+            maxWidth = maxWidth,
+            alpha = 0.85f
+        )
+        ParallaxLayer(
+            painter = skyPainter,
+            offset = midOffset,
+            maxWidth = maxWidth
+        )
+        GroundLayer(
+            painter = groundPainter,
+            offset = groundOffset,
+            maxWidth = maxWidth,
+            height = groundHeight
+        )
+        PixelSparklesLayer(
+            count = 14,
+            groundTop = groundTop
+        )
     }
 }
 
