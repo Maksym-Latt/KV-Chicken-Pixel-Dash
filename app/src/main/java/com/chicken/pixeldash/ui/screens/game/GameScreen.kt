@@ -155,18 +155,24 @@ fun GameScreen(
                 }
             }
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                ParallaxLayer(
-                    painter = painterResource(id = R.drawable.bg),
-                    offset = farOffset,
-                    maxWidth = maxWidth,
-                    alpha = 0.85f
-                )
-                ParallaxLayer(
-                    painter = painterResource(id = R.drawable.bg),
-                    offset = midOffset,
-                    maxWidth = maxWidth
-                )
+            BoxWithConstraints(
+                modifier = Modifier.fillMaxSize()
+            ) {
+                val maxW = maxWidth
+
+                Box(modifier = Modifier.fillMaxSize()) {
+                    ParallaxLayer(
+                        painter = painterResource(id = R.drawable.bg),
+                        offset = farOffset,
+                        maxWidth = maxW,
+                        alpha = 0.85f
+                    )
+                    ParallaxLayer(
+                        painter = painterResource(id = R.drawable.bg),
+                        offset = midOffset,
+                        maxWidth = maxW
+                    )
+                }
             }
             Row(
                 modifier = Modifier
@@ -352,49 +358,4 @@ private fun wrapOffset(value: Float, width: Float): Float {
     while (offset <= -limit) offset += limit
     while (offset >= limit) offset -= limit
     return offset
-}
-
-@Composable
-private fun OverlayCard(
-    title: String,
-    subtitle: String,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x88000000))
-    ) {
-        Surface(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(20.dp),
-            shape = RoundedCornerShape(14.dp),
-            color = Color(0xFFFBF5E9)
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 22.dp, vertical = 18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = title,
-                    fontFamily = retroFont,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 20.sp,
-                    color = Color(0xFF1C0F00),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = subtitle,
-                    fontFamily = retroFont,
-                    fontSize = 12.sp,
-                    color = Color(0xFF2B1A00),
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                content()
-            }
-        }
-    }
 }
