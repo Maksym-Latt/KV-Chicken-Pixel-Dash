@@ -11,9 +11,6 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.random.Random
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.NonCancellable.isActive
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -87,7 +84,6 @@ class GameViewModel @Inject constructor(
         )
     }.stateIn(viewModelScope, SharingStarted.Eagerly, GameUiState())
 
-    private var gameJob: Job? = null
     private var viewportWidth = 360f
     private var viewportHeight = 640f
     private var velocityY = 0f
@@ -187,12 +183,10 @@ class GameViewModel @Inject constructor(
     }
 
     fun onExit() {
-        gameJob?.cancel()
         audioController.stopMusic()
     }
 
     private fun resetGame(startStatus: GameStatus) {
-        gameJob?.cancel()
         velocityY = 0f
         elapsedTime = 0f
         animationTimer = 0f
@@ -205,31 +199,19 @@ class GameViewModel @Inject constructor(
 
         hitPlayed = false
         gameOverTriggered = false
-
-        gameJob = viewModelScope.launch { gameLoop() }
     }
 
-    private suspend fun gameLoop() {
-        var last = System.currentTimeMillis()
-        while (isActive) {
-            val now = System.currentTimeMillis()
-            val dt = (now - last).coerceAtMost(32).toFloat() / 1000f
-            last = now
-            val state = _uiState.value
-            if (state.status == GameStatus.Running) {
-                tick(dt)
-            }
-            delay(16)
-        }
-    }
+    fun onFrame(deltaTime: Float) {
+        val state = _uiState.value
+        if (state.status != GameStatus.Running) return
 
-    private fun tick(dt: Float) {
+        val dt = deltaTime.coerceAtMost(0.032f)
         elapsedTime += dt
         animationTimer += dt
         spawnTimer -= dt
         eggSpawnTimer -= dt
 
-        var state = _uiState.value
+        var state = state
         val speed = (BASE_SPEED + elapsedTime * SPEED_GROWTH).coerceAtMost(MAX_SPEED)
 
         val newFrame = ((animationTimer * 10).toInt() % 4)
