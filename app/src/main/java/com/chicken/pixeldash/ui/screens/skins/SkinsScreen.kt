@@ -110,7 +110,6 @@ fun SkinsScreen(
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
-            alpha = 0.6f
         )
 
         Column(

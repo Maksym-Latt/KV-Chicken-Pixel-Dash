@@ -6,16 +6,18 @@ import androidx.annotation.RawRes
 import com.chicken.pixeldash.R
 import com.chicken.pixeldash.data.settings.SettingsRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import javax.inject.Inject
-import javax.inject.Singleton
 
 @Singleton
-class DefaultAudioController @Inject constructor(
-    @ApplicationContext private val context: Context,
-    settingsRepository: SettingsRepository
+class DefaultAudioController
+@Inject
+constructor(
+        @ApplicationContext private val context: Context,
+        settingsRepository: SettingsRepository
 ) : AudioController {
 
     private var musicVolume: Float = 100.toVolume()
@@ -77,7 +79,9 @@ class DefaultAudioController @Inject constructor(
 
     override fun resumeMusic() {
         musicPlayer?.let { player ->
-            currentMusic?.let { track -> player.setVolume(track.normalizedMusicVolume(), track.normalizedMusicVolume()) }
+            currentMusic?.let { track ->
+                player.setVolume(track.normalizedMusicVolume(), track.normalizedMusicVolume())
+            }
             player.start()
         }
     }
@@ -125,35 +129,46 @@ class DefaultAudioController @Inject constructor(
 
         stopMusic()
 
-        musicPlayer = MediaPlayer.create(context, track.resId).apply {
-            isLooping = true
-            val adjusted = track.normalizedMusicVolume()
-            setVolume(adjusted, adjusted)
-            setOnCompletionListener(null)
-            start()
-        }
+        musicPlayer =
+                MediaPlayer.create(context, track.resId).apply {
+                    isLooping = true
+                    val adjusted = track.normalizedMusicVolume()
+                    setVolume(adjusted, adjusted)
+                    setOnCompletionListener(null)
+                    start()
+                }
         currentMusic = track
     }
 
     private fun playSound(effect: SoundCue) {
-        val player = MediaPlayer.create(context, effect.resId).apply {
-            isLooping = false
-            val adjusted = effect.normalizedSoundVolume()
-            setVolume(adjusted, adjusted)
-            setOnCompletionListener {
-                it.release()
-                sfxPlayers.removeIf { instance -> instance.player === it }
+        // Launch on IO dispatcher to avoid blocking main thread
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val player = MediaPlayer.create(context, effect.resId)
+                if (player != null) {
+                    player.isLooping = false
+                    val adjusted = effect.normalizedSoundVolume()
+                    player.setVolume(adjusted, adjusted)
+                    player.setOnCompletionListener {
+                        it.release()
+                        sfxPlayers.removeIf { instance -> instance.player === it }
+                    }
+                    player.start()
+                    sfxPlayers.add(SfxInstance(player, effect))
+                }
+            } catch (e: Exception) {
+                // Ignore audio errors to prevent crashes
             }
-            start()
         }
-        sfxPlayers.add(SfxInstance(player, effect))
     }
 
     private fun Int.toVolume(): Float = (this.coerceIn(0, 100) / 100f).coerceIn(0f, 1f)
 
-    private fun MusicTrack.normalizedMusicVolume(): Float = musicVolume.adjustWith(MUSIC_NORMALIZATION[this])
+    private fun MusicTrack.normalizedMusicVolume(): Float =
+            musicVolume.adjustWith(MUSIC_NORMALIZATION[this])
 
-    private fun SoundCue.normalizedSoundVolume(): Float = soundVolume.adjustWith(SOUND_NORMALIZATION[this])
+    private fun SoundCue.normalizedSoundVolume(): Float =
+            soundVolume.adjustWith(SOUND_NORMALIZATION[this])
 
     private fun Float.adjustWith(gain: Float?): Float = (this * (gain ?: 1f)).coerceIn(0f, 1f)
 
@@ -169,27 +184,28 @@ class DefaultAudioController @Inject constructor(
 
     private enum class SoundCue(@RawRes val resId: Int) {
         VictoryFanfare(R.raw.sfx_victory_fanfare),
-
         ChickenHit(R.raw.sfx_chicken_hit),
-
         CollectEgg(R.raw.sfx_chicken_collect_egg),
-
         ChickenJump(R.raw.sfx_chicken_jump)
     }
 
     companion object {
-        private val MUSIC_NORMALIZATION = mapOf(
-            MusicTrack.MenuTheme to 0.8f,
-            MusicTrack.GameLoop to 0.75f,
-        )
+        private val MUSIC_NORMALIZATION =
+                mapOf(
+                        MusicTrack.MenuTheme to 0.8f,
+                        MusicTrack.GameLoop to 0.75f,
+                )
 
-        private val SOUND_NORMALIZATION = mapOf(
-            SoundCue.VictoryFanfare to 0.9f,
-            SoundCue.ChickenHit to 0.9f,
-            SoundCue.CollectEgg to 0.9f,
-            SoundCue.ChickenJump to 0.9f,
-        )
+        private val SOUND_NORMALIZATION =
+                mapOf(
+                        SoundCue.VictoryFanfare to 0.9f,
+                        SoundCue.ChickenHit to 0.7f,
+                        SoundCue.CollectEgg to 0.9f,
+                        SoundCue.ChickenJump to 0.9f,
+                )
 
         private data class SfxInstance(val player: MediaPlayer, val cue: SoundCue)
     }
+
+
 }

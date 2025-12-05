@@ -11,12 +11,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.random.Random
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 const val PLAYER_X = 32f
@@ -30,59 +28,57 @@ private const val TIME_SCORE_RATE = 12f
 private const val EGG_SCORE_VALUE = 10
 private const val DEFAULT_GROUND_HEIGHT = 140f
 
-enum class GameStatus { Ready, Running, Paused, Over }
+enum class GameStatus {
+    Ready,
+    Running,
+    Paused,
+    Over
+}
 
-enum class EntityType { Rock, Box, Egg }
+enum class EntityType {
+    Rock,
+    Box,
+    Egg
+}
 
 data class Entity(
-    val id: Int,
-    val type: EntityType,
-    val x: Float,
-    val y: Float,
-    val sizeScale: Float = 1f,
-    val hitboxScale: Float = 1f
+        val id: Int,
+        val type: EntityType,
+        val x: Float,
+        val y: Float,
+        val sizeScale: Float = 1f,
+        val hitboxScale: Float = 1f
 )
 
 data class GameUiState(
-    val score: Int = 0,
-    val eggsCollected: Int = 0,
-    val bestScore: Int = 0,
-    val status: GameStatus = GameStatus.Ready,
-    val skin: Skin = SkinCatalog.allSkins.first(),
-    val musicEnabled: Boolean = true,
-    val soundEnabled: Boolean = true,
-    val playerY: Float = 0f,
-    val playerFrame: Int = 0,
-    val speed: Float = BASE_SPEED,
-    val groundHeight: Float = DEFAULT_GROUND_HEIGHT,
-    val playerSizeScale: Float = 1f,
-    val playerHitboxScale: Float = 1f,
-    val obstacles: List<Entity> = emptyList(),
-    val eggs: List<Entity> = emptyList(),
+        val score: Int = 0,
+        val eggsCollected: Int = 0,
+        val bestScore: Int = 0,
+        val status: GameStatus = GameStatus.Ready,
+        val skin: Skin = SkinCatalog.allSkins.first(),
+        val musicEnabled: Boolean = true,
+        val soundEnabled: Boolean = true,
+        val playerY: Float = 0f,
+        val playerFrame: Int = 0,
+        val speed: Float = BASE_SPEED,
+        val groundHeight: Float = DEFAULT_GROUND_HEIGHT,
+        val playerSizeScale: Float = 1f,
+        val playerHitboxScale: Float = 1f,
+        val obstacles: List<Entity> = emptyList(),
+        val eggs: List<Entity> = emptyList(),
 )
 
 @HiltViewModel
-class GameViewModel @Inject constructor(
-    private val playerRepository: PlayerRepository,
-    private val settingsRepository: SettingsRepository,
-    private val audioController: AudioController
+class GameViewModel
+@Inject
+constructor(
+        private val playerRepository: PlayerRepository,
+        private val settingsRepository: SettingsRepository,
+        private val audioController: AudioController
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GameUiState())
-    val uiState: StateFlow<GameUiState> = combine(
-        _uiState,
-        playerRepository.bestScore,
-        playerRepository.selectedSkin,
-        settingsRepository.musicEnabled,
-        settingsRepository.soundEnabled
-    ) { state, best, skinId, musicEnabled, soundEnabled ->
-        state.copy(
-            bestScore = max(best, state.bestScore),
-            skin = SkinCatalog.findById(skinId),
-            musicEnabled = musicEnabled,
-            soundEnabled = soundEnabled
-        )
-    }.stateIn(viewModelScope, SharingStarted.Eagerly, GameUiState())
+    val uiState: StateFlow<GameUiState> = _uiState
 
     private var viewportWidth = 360f
     private var viewportHeight = 640f
@@ -96,7 +92,36 @@ class GameViewModel @Inject constructor(
     private var gameOverTriggered = false
 
     init {
-        viewModelScope.launch { applyAudioVolumes() }
+        viewModelScope.launch {
+            val initialSkinId = playerRepository.selectedSkin.first()
+            val initialMusicEnabled = settingsRepository.musicEnabled.first()
+            val initialSoundEnabled = settingsRepository.soundEnabled.first()
+
+            _uiState.value =
+                    _uiState.value.copy(
+                            skin = SkinCatalog.findById(initialSkinId),
+                            musicEnabled = initialMusicEnabled,
+                            soundEnabled = initialSoundEnabled
+                    )
+
+            launch {
+                playerRepository.selectedSkin.collect { skinId ->
+                    _uiState.value = _uiState.value.copy(skin = SkinCatalog.findById(skinId))
+                }
+            }
+            launch {
+                settingsRepository.musicEnabled.collect { enabled ->
+                    _uiState.value = _uiState.value.copy(musicEnabled = enabled)
+                }
+            }
+            launch {
+                settingsRepository.soundEnabled.collect { enabled ->
+                    _uiState.value = _uiState.value.copy(soundEnabled = enabled)
+                }
+            }
+
+            applyAudioVolumes()
+        }
     }
 
     fun onViewportChanged(width: Float, height: Float) {
@@ -192,10 +217,8 @@ class GameViewModel @Inject constructor(
         animationTimer = 0f
         spawnTimer = 0.2f
         eggSpawnTimer = 0.45f
-        _uiState.value = GameUiState(
-            status = startStatus,
-            groundHeight = _uiState.value.groundHeight
-        )
+        _uiState.value =
+                GameUiState(status = startStatus, groundHeight = _uiState.value.groundHeight)
 
         hitPlayed = false
         gameOverTriggered = false
@@ -211,7 +234,6 @@ class GameViewModel @Inject constructor(
         spawnTimer -= dt
         eggSpawnTimer -= dt
 
-        var state = state
         val speed = (BASE_SPEED + elapsedTime * SPEED_GROWTH).coerceAtMost(MAX_SPEED)
 
         val newFrame = ((animationTimer * 10).toInt() % 4)
@@ -222,49 +244,74 @@ class GameViewModel @Inject constructor(
             newVelocity = 0f
         }
 
-        val movedObstacles = state.obstacles.mapNotNull { entity ->
+        // Move obstacles and eggs in one pass
+        val movedObstacles = ArrayList<Entity>(state.obstacles.size)
+        for (entity in state.obstacles) {
             val nextX = entity.x - speed * dt
-            if (nextX + entity.spriteWidth() < 0f) null else entity.copy(x = nextX)
+            if (nextX + entity.spriteWidth() >= 0f) {
+                movedObstacles.add(entity.copy(x = nextX))
+            }
         }
-        val movedEggs = state.eggs.mapNotNull { entity ->
+
+        val movedEggs = ArrayList<Entity>(state.eggs.size)
+        for (entity in state.eggs) {
             val nextX = entity.x - speed * dt
-            if (nextX + entity.spriteWidth() < 0f) null else entity.copy(x = nextX)
+            if (nextX + entity.spriteWidth() >= 0f) {
+                movedEggs.add(entity.copy(x = nextX))
+            }
         }
 
         val playerRect = playerHitboxRect(newY)
 
+        // Check egg collection
+        var eggsCollected = 0
+        val survivingEggs = ArrayList<Entity>(movedEggs.size)
+        for (egg in movedEggs) {
+            if (intersects(playerRect, egg.hitboxRect())) {
+                eggsCollected++
+            } else {
+                survivingEggs.add(egg)
+            }
+        }
 
-        val (survivingEggs, collectedEggs) = movedEggs.partition { !intersects(playerRect, it.hitboxRect()) }
-
-        if (collectedEggs.isNotEmpty()) {
+        if (eggsCollected > 0) {
             audioController.playCollectEgg()
         }
 
-        val collision = movedObstacles.any { intersects(playerRect, it.hitboxRect()) }
+        // Check collision with obstacles
+        var collision = false
+        for (obstacle in movedObstacles) {
+            if (intersects(playerRect, obstacle.hitboxRect())) {
+                collision = true
+                break
+            }
+        }
 
         if (collision && !hitPlayed) {
             hitPlayed = true
             audioController.playChickenHit()
         }
-        val newScore = (elapsedTime * TIME_SCORE_RATE).toInt() + (state.eggsCollected + collectedEggs.size) * EGG_SCORE_VALUE
 
-        state = state.copy(
-            playerY = newY,
-            playerFrame = newFrame,
-            speed = speed,
-            obstacles = movedObstacles,
-            eggs = survivingEggs,
-            eggsCollected = state.eggsCollected + collectedEggs.size,
-            score = newScore
-        )
+        val newScore =
+                (elapsedTime * TIME_SCORE_RATE).toInt() +
+                        (state.eggsCollected + eggsCollected) * EGG_SCORE_VALUE
 
-        _uiState.value = state
+        _uiState.value =
+                state.copy(
+                        playerY = newY,
+                        playerFrame = newFrame,
+                        speed = speed,
+                        obstacles = movedObstacles,
+                        eggs = survivingEggs,
+                        eggsCollected = state.eggsCollected + eggsCollected,
+                        score = newScore
+                )
+
         velocityY = newVelocity
 
         if (collision && !gameOverTriggered) {
             gameOverTriggered = true
             viewModelScope.launch {
-                delay(120)
                 handleGameOver()
             }
             return
@@ -287,18 +334,10 @@ class GameViewModel @Inject constructor(
 
         val spawnX = viewportWidth + width + 12f
 
-        val newObstacle = Entity(
-            id = Random.nextInt(),
-            type = type,
-            x = spawnX,
-            y = 0f
-        )
+        val newObstacle = Entity(id = Random.nextInt(), type = type, x = spawnX, y = 0f)
 
-        _uiState.value = _uiState.value.copy(
-            obstacles = _uiState.value.obstacles + newObstacle
-        )
+        _uiState.value = _uiState.value.copy(obstacles = _uiState.value.obstacles + newObstacle)
     }
-
 
     private fun spawnEgg() {
         val temp = Entity(id = 0, type = EntityType.Egg, x = 0f, y = 0f)
@@ -306,43 +345,36 @@ class GameViewModel @Inject constructor(
 
         val baseSpawnX = viewportWidth + width + 24f
 
-        val closestObstacleFront = _uiState.value.obstacles
-            .maxOfOrNull { it.x + it.spriteWidth() }
-            ?: 0f
+        val closestObstacleFront =
+                _uiState.value.obstacles.maxOfOrNull { it.x + it.spriteWidth() } ?: 0f
 
-        val closestEggFront = _uiState.value.eggs
-            .maxOfOrNull { it.x + it.spriteWidth() }
-            ?: 0f
+        val closestEggFront = _uiState.value.eggs.maxOfOrNull { it.x + it.spriteWidth() } ?: 0f
 
         val minSpacing = 96f
-        val spawnX = listOf(baseSpawnX, closestObstacleFront + minSpacing, closestEggFront + minSpacing).max()
+        val spawnX =
+                listOf(baseSpawnX, closestObstacleFront + minSpacing, closestEggFront + minSpacing)
+                        .max()
 
         val isGroundEgg = Random.nextFloat() < 0.7f
 
-        val y = if (isGroundEgg) {
-            0f
-        } else {
-            val maxAir = (viewportHeight * 0.15f).coerceAtLeast(height)
-            Random.nextFloat() * maxAir
-        }
+        val y =
+                if (isGroundEgg) {
+                    0f
+                } else {
+                    val maxAir = (viewportHeight * 0.15f).coerceAtLeast(height)
+                    Random.nextFloat() * maxAir
+                }
 
-        val newEgg = Entity(
-            id = Random.nextInt(),
-            type = EntityType.Egg,
-            x = spawnX,
-            y = y
-        )
+        val newEgg = Entity(id = Random.nextInt(), type = EntityType.Egg, x = spawnX, y = y)
 
-        _uiState.value = _uiState.value.copy(
-            eggs = _uiState.value.eggs + newEgg
-        )
+        _uiState.value = _uiState.value.copy(eggs = _uiState.value.eggs + newEgg)
     }
-
 
     private fun handleGameOver() {
         val finalState = _uiState.value
         _uiState.value = finalState.copy(status = GameStatus.Over)
         viewModelScope.launch {
+            delay(300)
             audioController.playGameWin()
             audioController.pauseMusic()
             playerRepository.updateBestScore(finalState.score)

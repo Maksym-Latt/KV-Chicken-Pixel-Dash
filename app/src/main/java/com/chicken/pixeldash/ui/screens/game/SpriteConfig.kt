@@ -4,13 +4,13 @@ package com.chicken.pixeldash.ui.screens.game
 //  PIXEL SIZE CONFIG
 // -------------------------
 internal object SpriteConfig {
-    // visual scale (как объект выглядит на экране)
+    // visual scale
     const val CHICKEN_SCALE = 0.45f
     const val ROCK_SCALE = 0.32f
     const val BOX_SCALE = 0.32f
     const val EGG_SCALE = 0.23f
 
-    // hitbox scale (насколько большой коллайдер)
+    // hitbox scale
     const val CHICKEN_HITBOX = 0.70f
     const val ROCK_HITBOX = 0.70f
     const val BOX_HITBOX = 0.80f
@@ -40,11 +40,9 @@ const val EGG_BASE_HEIGHT = 179f
 
 data class Rect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
-// Доступ к размерам
 internal fun Entity.spriteWidth(): Float = spriteSize().first
 internal fun Entity.spriteHeight(): Float = spriteSize().second
 
-// Выбор визуального масштаба по типу
 internal fun Entity.autoSizeScale(): Float =
     when (type) {
         EntityType.Rock -> SpriteConfig.ROCK_SCALE
@@ -52,7 +50,6 @@ internal fun Entity.autoSizeScale(): Float =
         EntityType.Egg  -> SpriteConfig.EGG_SCALE
     }
 
-// Выбор хитбокса по типу
 internal fun Entity.autoHitboxScale(): Float =
     when (type) {
         EntityType.Rock -> SpriteConfig.ROCK_HITBOX
@@ -60,7 +57,6 @@ internal fun Entity.autoHitboxScale(): Float =
         EntityType.Egg  -> SpriteConfig.EGG_HITBOX
     }
 
-// Финальный визуальный размер
 internal fun Entity.spriteSize(): Pair<Float, Float> {
     val s = autoSizeScale()
     return when (type) {
@@ -70,7 +66,6 @@ internal fun Entity.spriteSize(): Pair<Float, Float> {
     }
 }
 
-// Прямоугольник хитбокса сущности
 internal fun Entity.hitboxRect(): Rect {
     val (spriteWidth, spriteHeight) = spriteSize()
     val h = autoHitboxScale()
@@ -83,11 +78,6 @@ internal fun Entity.hitboxRect(): Rect {
 
     return Rect(left, top, left + hitboxWidth, top + hitboxHeight)
 }
-
-
-// -------------------------
-//  PLAYER SIZE + HITBOX
-// -------------------------
 
 internal fun playerSpriteSize(): Pair<Float, Float> =
     PLAYER_BASE_WIDTH * SpriteConfig.CHICKEN_SCALE to
@@ -105,11 +95,6 @@ internal fun playerHitboxRect(y: Float): Rect {
 
     return Rect(left, top, left + hitboxWidth, top + hitboxHeight)
 }
-
-
-// -------------------------
-//  COLLISION HELPER
-// -------------------------
 
 internal fun intersects(a: Rect, b: Rect): Boolean {
     val horizontal = a.left < b.right && a.right > b.left

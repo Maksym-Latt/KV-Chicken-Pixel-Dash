@@ -3,7 +3,6 @@ package com.chicken.pixeldash.ui.screens.game
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -27,12 +26,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Slider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -55,22 +51,17 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.chicken.pixeldash.R
 import com.chicken.pixeldash.ui.components.EggCounter
-import com.chicken.pixeldash.ui.components.GradientText
 import com.chicken.pixeldash.ui.components.IconOvalButton
 import com.chicken.pixeldash.ui.components.ScoreCounter
 import com.chicken.pixeldash.ui.screens.intro.IntroOverlay
-import com.chicken.pixeldash.ui.theme.retroFont
-import kotlinx.coroutines.isActive
 import kotlin.random.Random
+import kotlinx.coroutines.isActive
 
 private const val GROUND_IMAGE_WIDTH = 1536f
 private const val GROUND_IMAGE_HEIGHT = 403f
@@ -79,11 +70,7 @@ private const val FRAME_STEP = 1f / 120f
 private const val MAX_ACCUMULATED_TIME = 0.25f
 
 @Composable
-fun GameScreen(
-    viewModel: GameViewModel,
-    onExit: () -> Unit,
-    showIntroOnLaunch: Boolean = true
-) {
+fun GameScreen(viewModel: GameViewModel, onExit: () -> Unit, showIntroOnLaunch: Boolean = true) {
     val state by viewModel.uiState.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -120,27 +107,29 @@ fun GameScreen(
 
     Surface(color = Color(0xFF74C2E4)) {
         BoxWithConstraints(
-            modifier = Modifier
-                .fillMaxSize()
-                .pointerInput(Unit) {
-                    detectDragGestures(
-                        onDragStart = { startY = it.y; hasJumped = false },
-                        onDragCancel = { startY = null },
-                        onDragEnd = { startY = null }
-                    ) { change, _ ->
-                        if (startY != null && !hasJumped) {
-                            val dy = startY!! - change.position.y
-                            if (dy > 70f) {
-                                viewModel.jump(true)
-                                hasJumped = true
-                                startY = null
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragStart = {
+                                startY = it.y
+                                hasJumped = false
+                            },
+                            onDragCancel = { startY = null },
+                            onDragEnd = { startY = null }
+                        ) { change, _ ->
+                            if (startY != null && !hasJumped) {
+                                val dy = startY!! - change.position.y
+                                if (dy > 70f) {
+                                    viewModel.jump(true)
+                                    hasJumped = true
+                                    startY = null
+                                }
                             }
                         }
                     }
-                }
-                .pointerInput(Unit) {
-                    detectTapGestures { viewModel.jump(false) }
-                }
+                    .pointerInput(Unit) { detectTapGestures { viewModel.jump(false) } }
         ) {
             val groundHeight = maxWidth * GROUND_HEIGHT_RATIO
             val groundTop = maxHeight - groundHeight
@@ -149,9 +138,7 @@ fun GameScreen(
                 viewModel.onViewportChanged(maxWidth.value, maxHeight.value)
             }
 
-            LaunchedEffect(groundHeight) {
-                viewModel.updateGroundHeight(groundHeight.value)
-            }
+            LaunchedEffect(groundHeight) { viewModel.updateGroundHeight(groundHeight.value) }
 
             GameBackground(
                 status = state.status,
@@ -164,13 +151,13 @@ fun GameScreen(
                 onFrame = viewModel::onFrame
             )
 
-
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp)
-                    .windowInsetsPadding(WindowInsets.safeDrawing)
-                    .align(Alignment.TopCenter),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .align(Alignment.TopCenter),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -197,30 +184,33 @@ fun GameScreen(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp)
-            ) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp)) {
                 state.obstacles.forEach { o ->
-                    val obstaclePainter = if (o.type == EntityType.Box) boxPainter else rockPainter
-                    Sprite(
-                        painter = obstaclePainter,
-                        spriteSize = o.spriteSize(),
-                        x = o.x,
-                        groundTop = groundTop,
-                        spriteY = o.y
-                    )
+                    androidx.compose.runtime.key(o.id) {
+                        val obstaclePainter =
+                            if (o.type == EntityType.Box) boxPainter else rockPainter
+                        Sprite(
+                            painter = obstaclePainter,
+                            spriteSize = o.spriteSize(),
+                            x = o.x,
+                            groundTop = groundTop,
+                            spriteY = o.y
+                        )
+                    }
                 }
 
                 state.eggs.forEach { egg ->
-                    Sprite(
-                        painter = eggPainter,
-                        spriteSize = egg.spriteSize(),
-                        x = egg.x,
-                        groundTop = groundTop,
-                        spriteY = egg.y
-                    )
+                    androidx.compose.runtime.key(egg.id) {
+                        Sprite(
+                            painter = eggPainter,
+                            spriteSize = egg.spriteSize(),
+                            x = egg.x,
+                            groundTop = groundTop,
+                            spriteY = egg.y
+                        )
+                    }
                 }
 
                 val playerPainter = painterResource(id = state.skin.drawable)
@@ -253,7 +243,6 @@ fun GameScreen(
                 )
             }
 
-
             if (state.status == GameStatus.Over) {
                 GameOverScreen(
                     score = state.score,
@@ -269,7 +258,6 @@ fun GameScreen(
         }
     }
 }
-
 
 @Composable
 private fun BoxWithConstraintsScope.GameBackground(
@@ -320,30 +308,17 @@ private fun BoxWithConstraintsScope.GameBackground(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        ParallaxLayer(
-            painter = skyPainter,
-            offset = farOffset,
-            maxWidth = maxWidth,
-            alpha = 0.85f
-        )
-        ParallaxLayer(
-            painter = skyPainter,
-            offset = midOffset,
-            maxWidth = maxWidth
-        )
+        ParallaxLayer(painter = skyPainter, offset = farOffset, maxWidth = maxWidth, alpha = 0.85f)
+        ParallaxLayer(painter = skyPainter, offset = midOffset, maxWidth = maxWidth)
         GroundLayer(
             painter = groundPainter,
             offset = groundOffset,
             maxWidth = maxWidth,
             height = groundHeight
         )
-        PixelSparklesLayer(
-            count = 14,
-            groundTop = groundTop
-        )
+        PixelSparklesLayer(count = 14, groundTop = groundTop)
     }
 }
-
 
 @Composable
 private fun BoxScope.ParallaxLayer(
@@ -355,54 +330,56 @@ private fun BoxScope.ParallaxLayer(
     Image(
         painter = painter,
         contentDescription = null,
-        modifier = Modifier
-            .fillMaxSize()
-            .offset(x = offset.dp)
-            .graphicsLayer { this.alpha = alpha },
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .offset(x = offset.dp)
+                .graphicsLayer {
+                    this.alpha = alpha
+                },
         contentScale = ContentScale.Crop,
     )
 
     Image(
         painter = painter,
         contentDescription = null,
-        modifier = Modifier
-            .fillMaxSize()
-            .offset(x = (offset + maxWidth.value).dp)
-            .graphicsLayer { this.alpha = alpha },
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .offset(x = (offset + maxWidth.value).dp)
+                .graphicsLayer {
+                    this.alpha = alpha
+                },
         contentScale = ContentScale.Crop,
     )
 }
 
 @Composable
-private fun BoxScope.GroundLayer(
-    painter: Painter,
-    offset: Float,
-    maxWidth: Dp,
-    height: Dp
-) {
+private fun BoxScope.GroundLayer(painter: Painter, offset: Float, maxWidth: Dp, height: Dp) {
     Image(
         painter = painter,
         contentDescription = null,
-        modifier = Modifier
-            .width(maxWidth)
-            .height(height)
-            .align(Alignment.BottomStart)
-            .offset(x = offset.dp),
+        modifier =
+            Modifier
+                .width(maxWidth)
+                .height(height)
+                .align(Alignment.BottomStart)
+                .offset(x = offset.dp),
         contentScale = ContentScale.FillBounds
     )
 
     Image(
         painter = painter,
         contentDescription = null,
-        modifier = Modifier
-            .width(maxWidth)
-            .height(height)
-            .align(Alignment.BottomStart)
-            .offset(x = (offset + maxWidth.value).dp),
+        modifier =
+            Modifier
+                .width(maxWidth)
+                .height(height)
+                .align(Alignment.BottomStart)
+                .offset(x = (offset + maxWidth.value).dp),
         contentScale = ContentScale.FillBounds
     )
 }
-
 
 @Composable
 private fun BoxScope.Sprite(
@@ -421,14 +398,15 @@ private fun BoxScope.Sprite(
     Image(
         painter = painter,
         contentDescription = null,
-        modifier = Modifier
-            .size(width = width, height = height)
-            .offset(x = x.dp, y = yOffset)
-            .graphicsLayer {
-                if (bouncing) {
-                    translationY = (-spriteY * 0.04f)
-                }
-            },
+        modifier =
+            Modifier
+                .size(width = width, height = height)
+                .offset(x = x.dp, y = yOffset)
+                .graphicsLayer {
+                    if (bouncing) {
+                        translationY = (-spriteY * 0.04f)
+                    }
+                },
         contentScale = ContentScale.Crop
     )
 
@@ -437,10 +415,11 @@ private fun BoxScope.Sprite(
         val hitboxHeight = (hitbox.bottom - hitbox.top).dp
         val hitboxYOffset = groundTop - hitboxHeight - hitbox.top.dp
         Box(
-            modifier = Modifier
-                .offset(x = hitbox.left.dp, y = hitboxYOffset)
-                .size(hitboxWidth, hitboxHeight)
-                .border(1.dp, Color.Red, RoundedCornerShape(2.dp))
+            modifier =
+                Modifier
+                    .offset(x = hitbox.left.dp, y = hitboxYOffset)
+                    .size(hitboxWidth, hitboxHeight)
+                    .border(1.dp, Color.Red, RoundedCornerShape(2.dp))
         )
     }
 }
@@ -487,11 +466,9 @@ fun BoxScope.PixelSparklesLayer(
         }
     }
 
-    Canvas(
-        modifier = Modifier
-            .matchParentSize()
-            .graphicsLayer { alpha = 0.85f }
-    ) {
+    Canvas(modifier = Modifier
+        .matchParentSize()
+        .graphicsLayer { alpha = 0.85f }) {
         val w = size.width
 
         particles.forEach { p ->
